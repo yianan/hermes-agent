@@ -240,6 +240,52 @@ def _get_disabled_plugins() -> set:
         return set()
 
 
+def _get_disabled_plugin_skills() -> set:
+    """Return qualified plugin skill names disabled in this profile."""
+    try:
+        from hermes_cli.config import load_config
+        config = load_config()
+        disabled = cfg_get(config, "plugins", "disabled_skills", default=[])
+        return set(disabled) if isinstance(disabled, list) else set()
+    except Exception:
+        return set()
+
+
+def set_plugin_skill_disabled(qualified_name: str, disabled: bool) -> None:
+    """Persist per-skill disabled state in the active profile config."""
+    from hermes_cli.config import load_config, save_config
+
+    config = load_config()
+    plugins_cfg = config.setdefault("plugins", {})
+    current = plugins_cfg.get("disabled_skills", [])
+    names = set(current) if isinstance(current, list) else set()
+    if disabled:
+        names.add(qualified_name)
+    else:
+        names.discard(qualified_name)
+    plugins_cfg["disabled_skills"] = sorted(names)
+    save_config(config)
+
+
+def plugin_skill_override_path(qualified_name: str) -> Path:
+    """Return the deterministic profile-local override path for a skill."""
+    if qualified_name.count(":") != 1:
+        raise ValueError("Plugin skill names must be qualified as plugin:skill")
+    plugin_name, skill_name = qualified_name.split(":", 1)
+    from agent.skill_utils import _NAMESPACE_RE
+    if not plugin_name or not skill_name:
+        raise ValueError("Plugin and skill names cannot be empty")
+    if not _NAMESPACE_RE.match(plugin_name) or not _NAMESPACE_RE.match(skill_name):
+        raise ValueError("Plugin and skill names contain unsupported characters")
+    return (
+        get_hermes_home()
+        / "plugin-skill-overrides"
+        / plugin_name
+        / skill_name
+        / "SKILL.md"
+    )
+
+
 def _get_enabled_plugins() -> Optional[set]:
     """Read the enabled-plugins allow-list from config.yaml.
 
@@ -288,6 +334,9 @@ class PluginManifest:
     requires_env: List[Union[str, Dict[str, Any]]] = field(default_factory=list)
     provides_tools: List[str] = field(default_factory=list)
     provides_hooks: List[str] = field(default_factory=list)
+    # ``None`` means the manifest does not declare an authoritative skill
+    # inventory. An explicit list (including an empty one) is authoritative.
+    provides_skills: Optional[List[str]] = None
     source: str = ""        # "user", "project", or "entrypoint"
     path: Optional[str] = None
     # Plugin kind — see plugins.py module docstring for semantics.
@@ -1244,6 +1293,16 @@ class PluginContext:
             raise ValueError(
                 f"Invalid skill name '{name}'. Must match [a-zA-Z0-9_-]+."
             )
+        if (
+            self.manifest.provides_skills is not None
+            and name not in self.manifest.provides_skills
+        ):
+            logger.info(
+                "Skipping undeclared skill %s:%s (manifest inventory is authoritative)",
+                self.manifest.name,
+                name,
+            )
+            return
         if not path.exists():
             raise FileNotFoundError(f"SKILL.md not found at {path}")
 
@@ -1253,6 +1312,8 @@ class PluginContext:
             "plugin": self.manifest.name,
             "bare_name": name,
             "description": description,
+            "source": self.manifest.source,
+            "plugin_path": self.manifest.path,
         }
         logger.debug(
             "Plugin %s registered skill: %s",
@@ -1659,6 +1720,7 @@ class PluginManager:
                 requires_env=data.get("requires_env", []),
                 provides_tools=data.get("provides_tools", []),
                 provides_hooks=data.get("provides_hooks", []),
+                provides_skills=data.get("provides_skills") if "provides_skills" in data else None,
                 source=source,
                 path=str(plugin_dir),
                 kind=kind,
@@ -2023,17 +2085,104 @@ class PluginManager:
     # -----------------------------------------------------------------------
 
     def find_plugin_skill(self, qualified_name: str) -> Optional[Path]:
-        """Return the ``Path`` to a plugin skill's SKILL.md, or ``None``."""
+        """Return the effective skill path, honoring disable and overrides."""
+        if qualified_name in _get_disabled_plugin_skills():
+            return None
         entry = self._plugin_skills.get(qualified_name)
+        if not entry:
+            return None
+        override = plugin_skill_override_path(qualified_name)
+        return override if override.is_file() else entry["path"]
+
+    def find_plugin_skill_original(self, qualified_name: str) -> Optional[Path]:
+        """Return the immutable/canonical registered path, ignoring state."""
+        entry = self._plugin_skills.get(qualified_name) or self._declared_plugin_skill_entry(qualified_name)
         return entry["path"] if entry else None
 
-    def list_plugin_skills(self, plugin_name: str) -> List[str]:
-        """Return sorted bare names of all skills registered by *plugin_name*."""
+    def _declared_plugin_skill_entry(self, qualified_name: str) -> Optional[Dict[str, Any]]:
+        """Return safe manifest-declared metadata without activating a plugin.
+
+        Disabled plugins do not execute ``register()`` and therefore have no
+        runtime registry entries. Their manifests can still advertise skills
+        for inventory and editing, provided each conventional SKILL.md exists
+        inside the plugin directory.
+        """
+        if qualified_name.count(":") != 1:
+            return None
+        plugin_name, bare_name = qualified_name.split(":", 1)
+        for loaded in self._plugins.values():
+            manifest = getattr(loaded, "manifest", None)
+            if manifest is None or manifest.name != plugin_name:
+                continue
+            declared = manifest.provides_skills if isinstance(manifest.provides_skills, list) else []
+            if bare_name not in declared or not manifest.path:
+                return None
+            try:
+                plugin_root = Path(manifest.path).expanduser().resolve()
+                skill_path = plugin_root / "skills" / bare_name / "SKILL.md"
+                if skill_path.is_symlink() or not skill_path.is_file():
+                    return None
+                resolved = skill_path.resolve()
+                resolved.relative_to(plugin_root)
+            except (OSError, ValueError):
+                return None
+            return {
+                "path": resolved,
+                "plugin": plugin_name,
+                "bare_name": bare_name,
+                "description": "",
+                "source": manifest.source,
+                "plugin_path": manifest.path,
+            }
+        return None
+
+    def get_plugin_skill_info(self, qualified_name: str) -> Optional[Dict[str, Any]]:
+        """Return lifecycle metadata for a registered plugin skill."""
+        entry = self._plugin_skills.get(qualified_name) or self._declared_plugin_skill_entry(qualified_name)
+        if not entry:
+            return None
+        override = plugin_skill_override_path(qualified_name)
+        customized = override.is_file()
+        disabled = qualified_name in _get_disabled_plugin_skills()
+        return {
+            **entry,
+            "qualified_name": qualified_name,
+            "original_path": entry["path"],
+            "effective_path": override if customized else entry["path"],
+            "override_path": override,
+            "customized": customized,
+            "disabled": disabled,
+        }
+
+    def list_plugin_skill_info(self, plugin_name: str) -> List[Dict[str, Any]]:
+        """Return lifecycle metadata for registered or safely declared skills."""
         prefix = f"{plugin_name}:"
+        qualified_names = {
+            qn for qn in self._plugin_skills if qn.startswith(prefix)
+        }
+        for loaded in self._plugins.values():
+            manifest = getattr(loaded, "manifest", None)
+            if manifest is None or manifest.name != plugin_name:
+                continue
+            declared = manifest.provides_skills if isinstance(manifest.provides_skills, list) else []
+            qualified_names.update(
+                f"{plugin_name}:{name}" for name in declared if isinstance(name, str)
+            )
+        return [
+            info
+            for qn in sorted(qualified_names)
+            for info in [self.get_plugin_skill_info(qn)]
+            if info is not None
+        ]
+
+    def list_plugin_skills(self, plugin_name: str) -> List[str]:
+        """Return enabled bare skill names registered by *plugin_name*."""
+        prefix = f"{plugin_name}:"
+        disabled = _get_disabled_plugin_skills()
         return sorted(
             e["bare_name"]
             for qn, e in self._plugin_skills.items()
-            if qn.startswith(prefix)
+            if qn.startswith(prefix) and qn not in disabled
         )
 
     def remove_plugin_skill(self, qualified_name: str) -> None:

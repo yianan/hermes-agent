@@ -364,6 +364,22 @@ def _build_skill_message(
         parts.append("")
         parts.append(f"The user has provided the following instruction alongside the skill invocation: {user_instruction}")
 
+    # A staged skill's confirmation points are turn boundaries, not suggestions.
+    # Keep this reminder after the skill body and user instruction so it remains
+    # salient even for long finance/model-building skills.
+    parts.extend(
+        [
+            "",
+            "[Skill execution control: Follow every user-review, confirmation, or "
+            "approval gate in the loaded skill as a HARD TURN BOUNDARY. Work only "
+            "through the next gate, show the requested intermediate result, ask for "
+            "the user's confirmation, and END THE TURN. Do not continue to later "
+            "stages, even if you could complete them autonomously. Resume only after "
+            "a subsequent user reply. While doing substantial work before a gate, "
+            "provide concise progress updates rather than remaining silent.]",
+        ]
+    )
+
     if runtime_note:
         parts.append("")
         parts.append(f"[Runtime note: {runtime_note}]")

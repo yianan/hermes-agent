@@ -103,6 +103,65 @@ class TestPluginSkillRegistry:
         # Removing non-existent key is a no-op
         pm.remove_plugin_skill("p:x")
 
+    def test_profile_override_wins(self, pm, tmp_path, monkeypatch):
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
+        original = tmp_path / "original" / "SKILL.md"
+        original.parent.mkdir()
+        original.write_text("original")
+        pm._plugin_skills["p:x"] = {
+            "path": original, "plugin": "p", "bare_name": "x", "description": "",
+            "source": "bundled", "plugin_path": str(tmp_path / "plugin"),
+        }
+
+        from hermes_cli.plugins import plugin_skill_override_path
+        override = plugin_skill_override_path("p:x")
+        override.parent.mkdir(parents=True)
+        override.write_text("custom")
+
+        assert pm.find_plugin_skill("p:x") == override
+        info = pm.get_plugin_skill_info("p:x")
+        assert info["customized"] is True
+        assert info["effective_path"] == override
+        assert info["original_path"] == original
+
+    def test_disabled_skill_is_hidden_from_runtime(self, pm, tmp_path, monkeypatch):
+        md = tmp_path / "SKILL.md"
+        md.write_text("body")
+        pm._plugin_skills["p:x"] = {
+            "path": md, "plugin": "p", "bare_name": "x", "description": "",
+        }
+        monkeypatch.setattr(
+            "hermes_cli.plugins._get_disabled_plugin_skills", lambda: {"p:x"}
+        )
+
+        assert pm.find_plugin_skill("p:x") is None
+        assert pm.find_plugin_skill_original("p:x") == md
+        assert pm.list_plugin_skills("p") == []
+        assert pm.get_plugin_skill_info("p:x")["disabled"] is True
+
+    def test_disabled_plugin_keeps_declared_skill_inventory(self, pm, tmp_path, monkeypatch):
+        from hermes_cli.plugins import LoadedPlugin, PluginManifest
+
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))
+        plugin_dir = tmp_path / "plugins" / "finance"
+        skill_md = plugin_dir / "skills" / "dcf" / "SKILL.md"
+        skill_md.parent.mkdir(parents=True)
+        skill_md.write_text("---\nname: dcf\n---\nBody.\n")
+        manifest = PluginManifest(
+            name="finance",
+            source="user",
+            path=str(plugin_dir),
+            provides_skills=["dcf"],
+        )
+        pm._plugins["finance"] = LoadedPlugin(manifest=manifest, enabled=False)
+
+        info = pm.get_plugin_skill_info("finance:dcf")
+        assert info is not None
+        assert info["original_path"] == skill_md.resolve()
+        assert info["source"] == "user"
+        assert [item["bare_name"] for item in pm.list_plugin_skill_info("finance")] == ["dcf"]
+        assert pm.find_plugin_skill("finance:dcf") is None
+
 
 class TestPluginContextRegisterSkill:
     @pytest.fixture
@@ -138,6 +197,13 @@ class TestPluginContextRegisterSkill:
     def test_rejects_missing_file(self, ctx, tmp_path):
         with pytest.raises(FileNotFoundError):
             ctx.register_skill("foo", tmp_path / "nonexistent.md")
+
+    def test_explicit_manifest_inventory_can_remove_hardcoded_registration(self, ctx, tmp_path):
+        ctx.manifest.provides_skills = []
+
+        ctx.register_skill("deleted-skill", tmp_path / "missing" / "SKILL.md")
+
+        assert ctx._manager.get_plugin_skill_info("testplugin:deleted-skill") is None
 
 
 # ── skill_view qualified name dispatch ────────────────────────────────────

@@ -398,6 +398,8 @@ class TestBuildSkillInvocationMessage:
 
         assert msg is not None
         assert "test-skill" in msg
+        assert "HARD TURN BOUNDARY" in msg
+        assert "END THE TURN" in msg
         assert len(calls) == 1
         assert calls[0][0] == "TENOR_API_KEY"
 
@@ -633,6 +635,5 @@ class TestStackedSkillCommands:
         assert loaded == ["skill-a"]
         assert missing == ["gone"]
         assert "Skills missing (skipped): gone" in msg
-
 
 
