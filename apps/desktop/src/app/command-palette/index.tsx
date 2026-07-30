@@ -707,13 +707,12 @@ export function CommandPalette() {
               heading: cc.commands,
               items: contributedItems.map(item => ({
                 action: item.action,
-                // Evaluated per palette open (see the `open` dep below), which
-                // is the only moment a closed palette's state can be stale.
-                active: item.active?.(),
                 icon: item.icon ?? Zap,
                 id: item.key,
                 keywords: item.keywords,
-                label: item.label,
+                // Resolved per palette open (see the `open` dep below) so a
+                // state-describing row can't name a state it left.
+                label: typeof item.label === 'function' ? item.label() : item.label,
                 run: item.run
               }))
             }

@@ -263,12 +263,12 @@ registry.registerMany([
     area: KEYBINDS_AREA,
     data: {
       id: 'layout.editMode',
-      label: 'Layout edit mode on / off',
+      label: 'Show / hide layout edit mode',
       defaults: ['mod+shift+\\'],
       run: toggleLayoutEditMode
     } satisfies KeybindContribution
   },
-  ...paletteToggle({
+  paletteToggle({
     id: 'layout.editMode',
     label: 'Layout edit mode',
     action: 'layout.editMode',
@@ -302,7 +302,7 @@ registry.registerMany([
   },
   // Hiding the bar removes the surface that would otherwise offer it back, so
   // ⌘K is the guaranteed door in (alongside the rebindable ⌘⇧S).
-  ...paletteToggle({
+  paletteToggle({
     id: 'view.toggleStatusbar',
     label: 'Status bar',
     action: 'view.toggleStatusbar',
@@ -594,7 +594,7 @@ bindPaneCollapse(
   () => $logsOpen.set(false),
   () => $logsOpen.set(true)
 )
-registry.registerMany(
+registry.register(
   paletteToggle({
     id: 'logs.toggle',
     label: 'Logs',
@@ -606,9 +606,8 @@ registry.registerMany(
 
 // YOLO (dangerous-command approval bypass) is a status-bar zap and a /yolo
 // command; ⌘K is the third door onto the SAME store function, so a user who
-// lives in the palette never has to hunt for the pill. Explicit on/off rather
-// than a blind flip — auto-approving shell commands is not a thing to guess at.
-registry.registerMany(
+// lives in the palette never has to hunt for the pill.
+registry.register(
   paletteToggle({
     id: 'session.yolo',
     label: 'YOLO',
