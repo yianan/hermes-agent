@@ -707,12 +707,13 @@ export function CommandPalette() {
               heading: cc.commands,
               items: contributedItems.map(item => ({
                 action: item.action,
+                // Resolved per palette open (see the `open` dep below) so a
+                // state-describing row can't show a state it left.
+                detail: item.detail?.(),
                 icon: item.icon ?? Zap,
                 id: item.key,
                 keywords: item.keywords,
-                // Resolved per palette open (see the `open` dep below) so a
-                // state-describing row can't name a state it left.
-                label: typeof item.label === 'function' ? item.label() : item.label,
+                label: item.label,
                 run: item.run
               }))
             }

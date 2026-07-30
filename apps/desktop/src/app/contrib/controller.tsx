@@ -263,14 +263,14 @@ registry.registerMany([
     area: KEYBINDS_AREA,
     data: {
       id: 'layout.editMode',
-      label: 'Show / hide layout edit mode',
+      label: 'Toggle layout edit mode',
       defaults: ['mod+shift+\\'],
       run: toggleLayoutEditMode
     } satisfies KeybindContribution
   },
   paletteToggle({
     id: 'layout.editMode',
-    label: 'Layout edit mode',
+    label: 'Toggle layout edit mode',
     action: 'layout.editMode',
     icon: LayoutDashboard,
     keywords: ['layout', 'zones', 'panes', 'edit', 'rearrange'],
@@ -304,7 +304,7 @@ registry.registerMany([
   // ⌘K is the guaranteed door in (alongside the rebindable ⌘⇧S).
   paletteToggle({
     id: 'view.toggleStatusbar',
-    label: 'Status bar',
+    label: 'Toggle status bar',
     action: 'view.toggleStatusbar',
     icon: PanelBottom,
     keywords: ['status bar', 'statusbar', 'bottom bar', 'hide', 'show', 'chrome'],
@@ -597,7 +597,7 @@ bindPaneCollapse(
 registry.register(
   paletteToggle({
     id: 'logs.toggle',
-    label: 'Logs',
+    label: 'Toggle logs',
     keywords: ['logs', 'agent log', 'tail', 'debug'],
     get: () => $logsOpen.get(),
     set: enabled => $logsOpen.set(enabled)
@@ -610,7 +610,7 @@ registry.register(
 registry.register(
   paletteToggle({
     id: 'session.yolo',
-    label: 'YOLO',
+    label: 'Toggle YOLO',
     icon: Zap,
     keywords: ['yolo', 'approvals', 'auto-approve', 'bypass', 'dangerous', 'commands'],
     get: () => $yoloActive.get(),

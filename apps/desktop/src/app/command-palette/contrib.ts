@@ -12,17 +12,18 @@ export const PALETTE_AREA = 'palette'
 /** Payload of a `palette` data contribution. */
 export interface PaletteContribution {
   id: string
-  /**
-   * Row text. A function when the row describes live state — contributions are
-   * registered once at boot while the thing they name keeps moving, so the
-   * palette re-reads it on open.
-   */
-  label: (() => string) | string
+  label: string
   /** Keybind action id — its live combo renders as the hotkey hint. */
   action?: string
   icon?: IconComponent
   keywords?: string[]
   run: () => void
+  /**
+   * Muted text after the label — the live state the row acts on. A function
+   * because contributions register once at boot while that state keeps moving;
+   * the palette re-reads it on open.
+   */
+  detail?: () => string
 }
 
 /** Contributed palette rows, with stable render keys. */
@@ -33,26 +34,22 @@ export function usePaletteContributions(): Array<PaletteContribution & { key: st
 }
 
 /**
- * A binary setting as one palette row that names what picking it will DO:
- * `YOLO on` while it's off, `YOLO off` while it's on.
- *
- * "Toggle X" is a coin flip — it names neither the current state nor the
- * destination, and a palette row (unlike a slash command) has nowhere to type
- * `on`. `label` is the bare noun ("Status bar"); the direction is appended.
+ * A binary setting as one palette row: `Toggle status bar` with the live state
+ * trailing in muted text. The verb says what the row does, the detail says
+ * which way it will go — neither alone is enough.
  */
 export function paletteToggle(
-  spec: Omit<PaletteContribution, 'label' | 'run'> & {
-    label: string
+  spec: Omit<PaletteContribution, 'detail' | 'run'> & {
     get: () => boolean
     set: (enabled: boolean) => void
   }
 ) {
-  const { get, keywords = [], label, set, ...rest } = spec
+  const { get, keywords = [], set, ...rest } = spec
 
   const data: PaletteContribution = {
     ...rest,
+    detail: () => (get() ? 'on' : 'off'),
     keywords: [...keywords, 'on', 'off', 'enable', 'disable'],
-    label: () => `${label} ${get() ? 'off' : 'on'}`,
     run: () => set(!get())
   }
 
