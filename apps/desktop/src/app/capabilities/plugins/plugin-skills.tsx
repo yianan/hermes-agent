@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useI18n } from '@/i18n'
 import { type AgentPluginRow, type GatewayRequest, type PluginSkillRow, loadAgentPlugins } from '@/store/agent-plugins'
 import { confirm } from '@/store/confirm'
+import { SkillMarkdown } from '../skills/skill-markdown'
 import { notifyError } from '@/store/notifications'
 
 interface SkillResult {
@@ -201,9 +202,9 @@ export function PluginSkills({ plugin, request, profile }: PluginSkillsProps) {
                   onChange={e => setContent(e.target.value)}
                 />
               ) : (
-                <pre className="max-h-80 overflow-auto whitespace-pre-wrap text-xs" data-selectable-text="true">
-                  {content}
-                </pre>
+                <div className="max-h-96 overflow-auto">
+                  <SkillMarkdown content={content} />
+                </div>
               )}
             </div>
           )}

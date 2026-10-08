@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query'
-import { useMemo } from 'react'
 
 import { PageLoader } from '@/components/page-loader'
 import { Button } from '@/components/ui/button'
@@ -7,8 +6,8 @@ import { getSkillContent, type ProfileScope, profileScopeKey } from '@/hermes'
 import { useI18n } from '@/i18n'
 import type { SkillInfo } from '@/types/hermes'
 
-import { parseFrontmatter } from './frontmatter'
 import { isEditableProvenance } from './skill-provenance'
+import { SkillMarkdown } from './skill-markdown'
 
 export function SkillDetail({
   onArchive,
@@ -35,11 +34,6 @@ export function SkillDetail({
     staleTime: 60_000
   })
 
-  const parsed = useMemo(
-    () => (contentQuery.data ? parseFrontmatter(contentQuery.data.content) : null),
-    [contentQuery.data]
-  )
-
   return (
     <>
       {editable && (
@@ -54,13 +48,8 @@ export function SkillDetail({
       )}
       {contentQuery.isLoading ? (
         <PageLoader className="h-40" label={t.skills.loading} />
-      ) : parsed ? (
-        <pre
-          className="overflow-auto whitespace-pre-wrap wrap-break-word font-mono text-[0.68rem] leading-relaxed text-(--ui-text-secondary)"
-          data-selectable-text="true"
-        >
-          {parsed.body.trim() || t.skills.noDescription}
-        </pre>
+      ) : contentQuery.data ? (
+        <SkillMarkdown content={contentQuery.data.content} />
       ) : null}
     </>
   )
