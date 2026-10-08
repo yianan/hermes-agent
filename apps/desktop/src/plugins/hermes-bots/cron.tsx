@@ -20,6 +20,7 @@ import {
   host,
   Input,
   nextRunOverdueMs,
+  MessageTextContent,
   PanelEmpty,
   queryClient,
   relativeTime,
@@ -463,8 +464,8 @@ export function RoutineDetailDialog({ job, onClose, open }: RoutineDetailDialogP
           {instruction
             ? labeled(
                 b.cron.instruction,
-                <div className="max-h-48 overflow-y-auto whitespace-pre-wrap break-words rounded-md border border-(--ui-stroke-secondary) px-3 py-2 text-xs leading-5 text-(--ui-text-secondary)">
-                  {instruction}
+                <div className="max-h-48 overflow-y-auto break-words rounded-md border border-(--ui-stroke-secondary) px-3 py-2 text-xs leading-5 text-(--ui-text-secondary)">
+                  <MessageTextContent media={false} text={instruction} />
                 </div>
               )
             : null}

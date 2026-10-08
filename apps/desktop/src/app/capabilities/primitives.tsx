@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 
+import { CompactMarkdown } from '@/components/chat/compact-markdown'
+
 import { useI18n } from '@/i18n'
 
 import { ListStripButton } from '../master-detail'
@@ -25,9 +27,9 @@ export function DetailHeader({
         <h3 className="min-w-0 truncate text-[0.9375rem] font-semibold tracking-tight">{title}</h3>
         {pills}
       </div>
-      <p className="mt-1 text-[length:var(--conversation-caption-font-size)] leading-(--conversation-caption-line-height) text-(--ui-text-tertiary)">
-        {description}
-      </p>
+      <div className="mt-1 text-[length:var(--conversation-caption-font-size)] leading-(--conversation-caption-line-height) text-(--ui-text-tertiary)">
+        {typeof description === 'string' ? <CompactMarkdown text={description} /> : description}
+      </div>
     </header>
   )
 }

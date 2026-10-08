@@ -1,5 +1,7 @@
 'use client'
 
+import { CompactMarkdown } from '@/components/chat/compact-markdown'
+
 import { Textarea } from '@/components/ui/textarea'
 import { useI18n } from '@/i18n'
 import { cn } from '@/lib/utils'
@@ -43,9 +45,7 @@ export function QuestionBlock({
       onPointerDown={onActivate}
     >
       <div className="flex items-start gap-2">
-        <span className="flex-1 whitespace-pre-wrap font-medium leading-(--conversation-line-height)">
-          {question.question}
-        </span>
+        <CompactMarkdown className="min-w-0 flex-1 font-medium text-[length:inherit] text-[color:inherit]" text={question.question} />
         {choices.length > 0 ? (
           <span
             className="mt-px shrink-0 rounded-sm bg-(--chrome-action-hover) px-1 py-px text-[0.625rem] text-(--ui-text-tertiary)"

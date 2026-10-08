@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query'
-import { useMemo } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { CountSkeleton } from '@/components/ui/skeleton'
@@ -12,7 +11,7 @@ import { PanelPill } from '../../overlays/panel'
 import { asText, prettyName } from '../../settings/helpers'
 import { DetailHeader } from '../primitives'
 
-import { parseFrontmatter } from './frontmatter'
+import { SkillMarkdown } from './skill-markdown'
 
 // Detail pane for a not-yet-installed catalog skill.
 export function OfficialSkillDetail({
@@ -35,11 +34,6 @@ export function OfficialSkillDetail({
     retry: false
   })
 
-  const parsed = useMemo(
-    () => (previewQuery.data?.skill_md ? parseFrontmatter(previewQuery.data.skill_md) : null),
-    [previewQuery.data]
-  )
-
   return (
     <>
       <DetailHeader
@@ -58,25 +52,10 @@ export function OfficialSkillDetail({
           {installing ? t.skills.hub.installing : t.skills.hub.install}
         </Button>
       </div>
-      {parsed && parsed.meta.length > 0 && (
-        <div className="grid gap-1 rounded-lg border border-(--ui-stroke-tertiary) bg-(--ui-bg-quinary) p-3">
-          {parsed.meta.map(([key, value]) => (
-            <div className="flex gap-2 text-[0.68rem] leading-4" key={key}>
-              <span className="w-24 shrink-0 font-medium text-(--ui-text-tertiary)">{key}</span>
-              <span className="min-w-0 whitespace-pre-wrap break-words text-(--ui-text-secondary)">{value}</span>
-            </div>
-          ))}
-        </div>
-      )}
       {previewQuery.isLoading ? (
         <CountSkeleton />
-      ) : parsed ? (
-        <pre
-          className="overflow-auto whitespace-pre-wrap wrap-break-word rounded-lg border border-(--ui-stroke-tertiary) bg-(--ui-bg-quinary) p-3 font-mono text-[0.68rem] leading-relaxed"
-          data-selectable-text="true"
-        >
-          {parsed.body.trim() || t.skills.noDescription}
-        </pre>
+      ) : previewQuery.data?.skill_md ? (
+        <SkillMarkdown content={previewQuery.data.skill_md} />
       ) : null}
     </>
   )

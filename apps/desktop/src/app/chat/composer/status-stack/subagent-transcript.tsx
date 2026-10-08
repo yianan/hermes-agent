@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 
+import { CompactMarkdown } from '@/components/chat/compact-markdown'
+
 import { usePaneVisible } from '@/components/pane-shell/pane-visibility'
 import { useI18n } from '@/i18n'
 import { knownOwnerForSession, requestForOwnedSession } from '@/store/session-states'
@@ -69,9 +71,9 @@ export function SubagentTranscript({ sessionId, subagentId }: { sessionId: strin
       <h4 className="text-(--ui-text-secondary)">{t.agents.extendedTranscript}</h4>
       {tail?.truncated && <p className="text-(--ui-text-tertiary)">{t.agents.transcriptTruncated}</p>}
       {tail?.available ? (
-        <pre className="max-h-[30vh] overflow-auto overscroll-y-auto whitespace-pre-wrap break-words font-mono text-[0.68rem]">
-          {tail.text}
-        </pre>
+        <div className="max-h-[30vh] overflow-auto overscroll-y-auto">
+          <CompactMarkdown text={tail.text} />
+        </div>
       ) : (
         <p className="text-(--ui-text-tertiary)">{tail ? t.agents.transcriptUnavailable : t.agents.waitingActivity}</p>
       )}

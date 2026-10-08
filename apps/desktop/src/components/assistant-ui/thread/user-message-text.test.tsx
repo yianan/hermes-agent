@@ -64,13 +64,36 @@ describe('a sent reference renders as the chip the composer showed', () => {
   it('leaves a fenced block alone', () => {
     render(<UserMessageText text={'before\n```ts\nconst x = 1\n```\nafter'} />)
 
-    const fence = document.querySelector('[data-slot="aui_user-fence"]')
-
-    expect(fence?.textContent).toBe('const x = 1\n')
-    // #70451: a wide user fence wraps inside the bubble instead of growing a
-    // horizontal scrollbar under the transcript.
-    expect(fence?.className).toContain('overflow-x-hidden')
-    expect(fence?.className).toContain('whitespace-pre-wrap')
-    expect(fence?.className).not.toContain('overflow-x-auto')
+    expect(document.querySelector('pre code')?.textContent?.trim()).toBe('const x = 1')
+    expect(document.querySelector('pre')?.className).toContain('overflow-x-hidden')
+    expect(document.querySelector('pre')?.className).toContain('whitespace-pre-wrap')
+    expect(document.querySelector('pre')?.className).not.toContain('overflow-x-auto')
   })
+})
+
+it('renders full Markdown around composer references', () => {
+  render(
+    <UserMessageText
+      text={
+        '# Review\n\n**Check** @file:`apps/desktop/a b.ts`\n\n- First task\n\n| Item | Value |\n| --- | --- |\n| Count | 42 |'
+      }
+    />
+  )
+  expect(screen.getByRole('heading', { name: 'Review' })).toBeTruthy()
+  expect(screen.getByText('Check')).toBeTruthy()
+  expect(screen.queryByTitle('apps/desktop/a b.ts')).not.toBeNull()
+  expect(screen.getByRole('listitem').textContent).toContain('First task')
+  expect(screen.getByRole('cell', { name: 'Count' })).toBeTruthy()
+})
+
+it('keeps reference-looking text inside code literal', () => {
+  render(<UserMessageText text={'```text\n@file:`private notes.md`\n```'} />)
+  expect(document.querySelector('pre code')?.textContent?.trim()).toBe('@file:`private notes.md`')
+  expect(screen.queryByTitle('private notes.md')).toBeNull()
+})
+
+it('does not execute HTML supplied in a message', () => {
+  const { container } = render(<UserMessageText text={'# Review\n\n<script>alert("test")</script>'} />)
+  expect(screen.getByRole('heading', { name: 'Review' })).toBeTruthy()
+  expect(container.querySelector('script')).toBeNull()
 })

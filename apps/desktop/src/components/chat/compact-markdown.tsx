@@ -126,17 +126,25 @@ const HIGHLIGHTED_COMPONENTS = { ...COMPONENTS, pre: HighlightedPre }
 
 export const CompactMarkdown = memo(function CompactMarkdown({
   className,
-  highlightCode = false,
+  components,
+  highlightCode = true,
   text
 }: {
   className?: string
+  components?: Partial<Pick<typeof COMPONENTS, 'a' | 'code'>>
   highlightCode?: boolean
   text: string
 }) {
   return (
     <div className={cn('max-w-full text-xs leading-relaxed text-muted-foreground/90 wrap-anywhere', className)}>
       <Streamdown
-        components={highlightCode ? HIGHLIGHTED_COMPONENTS : COMPONENTS}
+        components={
+          components
+            ? { ...(highlightCode ? HIGHLIGHTED_COMPONENTS : COMPONENTS), ...components }
+            : highlightCode
+              ? HIGHLIGHTED_COMPONENTS
+              : COMPONENTS
+        }
         controls={false}
         mode="static"
         parseIncompleteMarkdown={false}

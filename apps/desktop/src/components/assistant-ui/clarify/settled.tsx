@@ -1,5 +1,7 @@
 'use client'
 
+import { CompactMarkdown } from '@/components/chat/compact-markdown'
+
 import type { ToolCallMessagePartProps } from '@assistant-ui/react'
 
 import { ToolFallback } from '@/components/assistant-ui/tool/fallback'
@@ -33,9 +35,7 @@ export function ClarifyToolSettled(props: ToolCallMessagePartProps) {
           <div className="grid gap-1" key={`${index}-${row.question ?? ''}`}>
             {row.question ? (
               <ClarifyLine icon={MessageQuestion}>
-                <span className="whitespace-pre-wrap font-medium leading-(--conversation-line-height)">
-                  {row.question}
-                </span>
+                <CompactMarkdown className="font-medium text-[length:inherit] text-[color:inherit]" text={row.question} />
               </ClarifyLine>
             ) : null}
             <ClarifyLine icon={CircleLetterA}>

@@ -1,3 +1,4 @@
+import { CompactMarkdown } from '@/components/chat/compact-markdown'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ConnectorLogo } from '@/components/ui/connector-logo'
@@ -212,7 +213,5 @@ function SecondLine({ card, reason }: { card: ConnectorCardModel; reason?: strin
     return <p className={cn('truncate text-[0.72rem]', REASON_TONE[card.state])}>{reason}</p>
   }
 
-  return card.description ? (
-    <p className="line-clamp-2 text-[0.72rem] leading-snug text-(--ui-text-secondary)">{card.description}</p>
-  ) : null
+  return card.description ? <CompactMarkdown className="line-clamp-2" text={card.description} /> : null
 }

@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 
+import { CompactMarkdown } from '@/components/chat/compact-markdown'
+
 import { ActionsContextMenu, ActionsMenu, type MenuKit, renderActionItem } from '@/components/ui/actions-menu'
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
@@ -334,18 +336,17 @@ export function PanelMeta({ className, rows }: { className?: string; rows: Panel
   )
 }
 
-// Monospace content block (job prompt, etc.) — mirrors the inspector's
-// input/output <pre> blocks: subtle bg, no border.
+// Read-only document block for scheduled-job instructions.
 export function PanelBlock({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <pre
+    <div
       className={cn(
-        'max-h-48 overflow-auto whitespace-pre-wrap break-words rounded bg-foreground/5 p-2.5 text-[0.68rem] leading-relaxed text-foreground/80',
+        'max-h-48 overflow-auto break-words rounded bg-foreground/5 p-2.5 text-[0.68rem] leading-relaxed text-foreground/80',
         className
       )}
     >
-      {children}
-    </pre>
+      {typeof children === 'string' ? <CompactMarkdown text={children} /> : children}
+    </div>
   )
 }
 

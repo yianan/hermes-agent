@@ -3,6 +3,7 @@ import { memo, type ReactNode, useCallback, useEffect, useMemo, useState } from 
 
 import { getToolsets, setToolsetEnabled } from '@/api/toolsets'
 import { useGatewayRequest } from '@/app/gateway/hooks/use-gateway-request'
+import { CompactMarkdown } from '@/components/chat/compact-markdown'
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { Switch } from '@/components/ui/switch'
@@ -398,7 +399,7 @@ function PackageRow({
                   desktop?.status === 'error' ? 'text-(--ui-danger,#f87171)' : 'text-(--ui-text-tertiary)'
                 )}
               >
-                {desktop?.status === 'error' ? desktop.error : pkg.description}
+                {desktop?.status === 'error' ? desktop.error : <CompactMarkdown text={pkg.description ?? ''} />}
               </div>
             )}
             {unavailableServers.map(server =>

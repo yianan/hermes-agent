@@ -447,9 +447,7 @@ export const UserMessage: FC<{
   )
 
   const bubbleContent = hasBody ? (
-    // Render the user's text through a minimal markdown pipeline:
-    // backtick `code` and ``` fenced ``` blocks, with directive chips
-    // (`@file:` etc.) still resolved inside the plain-text spans.
+    // Render full Markdown while preserving the composer's reference chips.
     <div
       className={cn(clampActive && 'sticky-human-clamp')}
       data-clamped={clampActive && bodyClamped ? 'true' : undefined}

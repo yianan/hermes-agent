@@ -1,6 +1,8 @@
 import { type ToolCallMessagePartProps } from '@assistant-ui/react'
 import { type FC, useEffect, useState } from 'react'
 
+import { CompactMarkdown } from '@/components/chat/compact-markdown'
+
 import { messageContentText } from '@/components/assistant-ui/thread/content'
 import { AGENT_MESSAGE_RE, agentAvatarCache, resolveAgentAvatar } from '@/components/assistant-ui/thread/user-message'
 
@@ -184,8 +186,8 @@ export const AgentDeliveryNotice: FC<ToolCallMessagePartProps> = props => {
             <summary className="cursor-pointer select-none text-center text-muted-foreground/45 hover:text-muted-foreground/70">
               show message
             </summary>
-            <div className="mt-1 max-w-[36rem] whitespace-pre-wrap rounded-lg border border-(--ui-stroke-tertiary) px-3 py-2 text-left text-[0.75rem] leading-5 text-foreground/85">
-              {replyBody}
+            <div className="mt-1 max-w-[36rem] rounded-lg border border-(--ui-stroke-tertiary) px-3 py-2 text-left text-[0.75rem] leading-5 text-foreground/85">
+              <CompactMarkdown text={replyBody} />
             </div>
           </details>
         </div>

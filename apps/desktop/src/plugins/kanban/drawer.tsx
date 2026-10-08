@@ -269,9 +269,7 @@ function Diagnostics({
             title={`${diag.title}${diag.count > 1 ? ` ×${diag.count}` : ''}`}
             tone={tone}
           >
-            <p className="whitespace-pre-wrap text-[0.6875rem] leading-relaxed text-(--ui-text-secondary)">
-              {diag.detail}
-            </p>
+            <TaskMarkdown text={diag.detail} />
             {actions.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {actions.map(action => (
@@ -627,9 +625,7 @@ function EstimateSection({ id }: { id: string }) {
               </Button>
             </Tip>
           </div>
-          {result.rationale && (
-            <p className="text-[0.6875rem] leading-relaxed text-(--ui-text-quaternary)">{result.rationale}</p>
-          )}
+          {result.rationale && <TaskMarkdown text={result.rationale} />}
         </div>
       ) : (
         <div className="flex items-center gap-2">
