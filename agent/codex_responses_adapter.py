@@ -401,17 +401,63 @@ def _derive_responses_function_call_id(call_id: str, response_item_id: Optional[
 
 # --- Schema conversion --------------------------------------------------------
 
+_STRICT_FILE_TOOLS = frozenset({"write_file", "patch"})
+_STRICT_OFF_WORKSPACES = ("ai-strategy-workshop/case-b",)
+
+
+def _strict_file_tools_off_for_workspace() -> bool:
+    """Keep Case B's measured streaming workaround when using file tools."""
+    try:
+        from agent.runtime_cwd import resolve_context_cwd
+        cwd = resolve_context_cwd()
+    except Exception:
+        return False
+    if cwd is None:
+        return False
+    path = str(cwd).rstrip("/")
+    return any(path.endswith(suffix) for suffix in _STRICT_OFF_WORKSPACES)
+
+
+def _strict_file_tool_parameters(schema: Dict[str, Any]) -> Dict[str, Any]:
+    """Make optional flat-schema fields nullable for Responses strict mode."""
+    if not isinstance(schema, dict) or schema.get("type") != "object":
+        return schema
+    props = schema.get("properties") or {}
+    required = set(schema.get("required") or [])
+    out_props: Dict[str, Any] = {}
+    for key, prop in props.items():
+        prop = {k: v for k, v in dict(prop).items() if k != "default"}
+        if key not in required:
+            kind = prop.get("type")
+            if isinstance(kind, str):
+                prop["type"] = [kind, "null"]
+            elif isinstance(kind, list) and "null" not in kind:
+                prop["type"] = list(kind) + ["null"]
+            if isinstance(prop.get("enum"), list) and None not in prop["enum"]:
+                prop["enum"] = list(prop["enum"]) + [None]
+        out_props[key] = prop
+    return {
+        "type": "object", "properties": out_props,
+        "required": list(out_props), "additionalProperties": False,
+    }
+
 def _responses_tools(tools: Optional[list[dict[str, Any]]] = None) -> Optional[list[dict[str, Any]]]:
     """Convert chat-completions tool schemas to Responses function-tool schemas."""
     fns = [item.get("function", {}) if isinstance(item, dict) else {} for item in tools or []]
-    converted = [
-        {
+    converted = []
+    for fn in fns:
+        if not _nonblank(fn.get("name")):
+            continue
+        name = fn["name"]
+        strict = fn.get("strict") if isinstance(fn.get("strict"), bool) else False
+        parameters = fn.get("parameters", {"type": "object", "properties": {}})
+        if name in _STRICT_FILE_TOOLS and not _strict_file_tools_off_for_workspace():
+            strict = True
+            parameters = _strict_file_tool_parameters(parameters)
+        converted.append({
             "type": "function", "name": fn["name"], "description": fn.get("description", ""),
-            "strict": fn.get("strict") if isinstance(fn.get("strict"), bool) else False,
-            "parameters": fn.get("parameters", {"type": "object", "properties": {}}),
-        }
-        for fn in fns if _nonblank(fn.get("name"))
-    ]
+            "strict": strict, "parameters": parameters,
+        })
     return converted or None
 
 

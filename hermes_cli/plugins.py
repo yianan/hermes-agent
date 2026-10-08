@@ -80,6 +80,43 @@ class PluginToolOverrideError(PermissionError):
 
 logger = logging.getLogger(__name__)
 
+
+def _get_disabled_plugin_skills() -> set[str]:
+    """Return profile-scoped qualified plugin skills disabled by the user."""
+    try:
+        config = load_config_readonly()
+        disabled = (config.get("plugins") or {}).get("disabled_skills", [])
+        return {name.strip() for name in disabled if isinstance(name, str) and name.strip()} if isinstance(disabled, list) else set()
+    except Exception:
+        return set()
+
+
+def plugin_skill_override_path(qualified_name: str) -> Path:
+    """Return a validated profile-local override location."""
+    from agent.skill_utils import _NAMESPACE_RE
+    if qualified_name.count(":") != 1:
+        raise ValueError("Plugin skill names must be qualified as plugin:skill")
+    namespace, bare = qualified_name.split(":", 1)
+    if not namespace or not bare or not _NAMESPACE_RE.match(namespace) or not _NAMESPACE_RE.match(bare):
+        raise ValueError("Invalid plugin skill name")
+    return get_hermes_home() / "plugin-skill-overrides" / namespace / bare / "SKILL.md"
+
+
+def set_plugin_skill_disabled(qualified_name: str, disabled: bool) -> None:
+    """Persist one plugin skill's enabled state in the active profile."""
+    from hermes_cli.config import load_config, save_config
+    plugin_skill_override_path(qualified_name)  # validate name
+    config = load_config()
+    plugins_cfg = config.setdefault("plugins", {})
+    current = plugins_cfg.get("disabled_skills", [])
+    names = {name.strip() for name in current if isinstance(name, str) and name.strip()} if isinstance(current, list) else set()
+    if disabled:
+        names.add(qualified_name)
+    else:
+        names.discard(qualified_name)
+    plugins_cfg["disabled_skills"] = sorted(names)
+    save_config(config)
+
 # ``HERMES_PLUGINS_DEBUG=1`` tees verbose discovery logs to stderr in addition to agent.log. Read
 # once at import; tests flip it mid-process via ``_install_plugin_debug_handler(force=True)``.
 _PLUGINS_DEBUG = env_var_enabled("HERMES_PLUGINS_DEBUG")
@@ -1505,14 +1542,68 @@ class PluginManager(PluginLoaderMixin, PluginDispatchMixin, PluginLedgerMixin):
         ]
 
     def find_plugin_skill(self, qualified_name: str) -> Optional[Path]:
-        """Return the ``Path`` to a plugin skill's SKILL.md, or ``None``."""
+        """Return the effective plugin skill path, honoring disable and overrides."""
+        if qualified_name in _get_disabled_plugin_skills():
+            return None
         entry = self._plugin_skills.get(qualified_name)
-        return entry["path"] if entry else None
+        if not entry:
+            return None
+        override = plugin_skill_override_path(qualified_name)
+        return override if override.is_file() and not override.is_symlink() else entry["path"]
+
+    def _declared_plugin_skill_entry(self, qualified_name: str) -> Optional[Dict[str, Any]]:
+        """Inspect an inactive plugin's declared skill without executing it."""
+        if qualified_name.count(":") != 1:
+            return None
+        namespace, bare = qualified_name.split(":", 1)
+        for loaded in self._plugins.values():
+            manifest = loaded.manifest
+            if (manifest.skill_namespace or manifest.name) != namespace:
+                continue
+            if not isinstance(manifest.provides_skills, list) or bare not in manifest.provides_skills or not manifest.path:
+                continue
+            try:
+                root = Path(manifest.path).expanduser().resolve()
+                path = root / "skills" / bare / "SKILL.md"
+                if path.is_symlink() or not path.is_file():
+                    return None
+                resolved = path.resolve()
+                resolved.relative_to(root)
+            except (OSError, ValueError):
+                return None
+            return {"path": resolved, "plugin": namespace, "plugin_key": manifest.key or manifest.name,
+                    "bare_name": bare, "description": "", "frontmatter": {},
+                    "source": manifest.source, "plugin_path": manifest.path}
+        return None
+
+    def get_plugin_skill_info(self, qualified_name: str) -> Optional[Dict[str, Any]]:
+        entry = self._plugin_skills.get(qualified_name) or self._declared_plugin_skill_entry(qualified_name)
+        if not entry:
+            return None
+        override = plugin_skill_override_path(qualified_name)
+        customized = override.is_file() and not override.is_symlink()
+        return {**entry, "qualified_name": qualified_name, "original_path": entry["path"],
+                "effective_path": override if customized else entry["path"],
+                "override_path": override, "customized": customized,
+                "disabled": qualified_name in _get_disabled_plugin_skills()}
+
+    def find_plugin_skill_original(self, qualified_name: str) -> Optional[Path]:
+        info = self.get_plugin_skill_info(qualified_name)
+        return info["original_path"] if info else None
+
+    def list_plugin_skill_info(self, plugin_name: str) -> List[Dict[str, Any]]:
+        names = {name for name in self._plugin_skills if name.startswith(f"{plugin_name}:")}
+        for loaded in self._plugins.values():
+            manifest = loaded.manifest
+            if (manifest.skill_namespace or manifest.name) == plugin_name and isinstance(manifest.provides_skills, list):
+                names.update(f"{plugin_name}:{bare}" for bare in manifest.provides_skills if isinstance(bare, str))
+        return [info for name in sorted(names) if (info := self.get_plugin_skill_info(name)) is not None]
 
     def list_plugin_skills(self, plugin_name: str) -> list[str]:
-        """Return sorted bare names of all skills registered by *plugin_name*."""
+        """Return enabled bare names registered by *plugin_name*."""
         prefix = f"{plugin_name}:"
-        return sorted(e["bare_name"] for qn, e in self._plugin_skills.items() if qn.startswith(prefix))
+        disabled = _get_disabled_plugin_skills()
+        return sorted(e["bare_name"] for qn, e in self._plugin_skills.items() if qn.startswith(prefix) and qn not in disabled)
 
     def list_plugin_skill_metadata(self) -> list[dict[str, Any]]:
         """Return progressive-disclosure metadata for registered plugin skills."""
@@ -1520,7 +1611,7 @@ class PluginManager(PluginLoaderMixin, PluginDispatchMixin, PluginLedgerMixin):
             {
                 "name": qualified, "description": str(entry.get("description", "")),
                 "category": "plugin", "frontmatter": dict(entry.get("frontmatter", {})),
-            } for qualified, entry in sorted(self._plugin_skills.items())
+            } for qualified, entry in sorted(self._plugin_skills.items()) if qualified not in _get_disabled_plugin_skills()
         ]
 
     def list_automation_blueprints(self) -> list[Any]:

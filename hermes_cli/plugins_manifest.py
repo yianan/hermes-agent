@@ -30,7 +30,7 @@ _VALID_PLUGIN_KINDS: set[str] = {"standalone", "backend", "exclusive", "platform
 # and continue loading. ``capabilities``/``emits``/``listens``/``hermes``/``depends`` are reserved.
 # ── Manifest v2 (#64165) parsing helpers ──────────────────────────────────
 _KNOWN_MANIFEST_FIELDS: set[str] = {
-    "name", "version", "description", "author", "requires_env", "provides_tools", "provides_hooks",
+    "name", "version", "description", "author", "requires_env", "provides_tools", "provides_hooks", "provides_skills",
     "kind", "hooks", "label", "optional_env", "platforms", "external_dependencies",
     "pip_dependencies", "provides_browser_providers", "provides_web_providers",
     "manifest_version", "api_version", "requires_plugins", "python_dependencies", "config_schema",
@@ -354,6 +354,7 @@ class PluginManifest:
     requires_env: list[str | dict[str, Any]] = field(default_factory=list)
     provides_tools: list[str] = field(default_factory=list)
     provides_hooks: list[str] = field(default_factory=list)
+    provides_skills: Optional[list[str]] = None
     source: str = ""        # "bundled", "user", "project", or "entrypoint"
     path: Optional[str] = None
     # ``standalone`` (default; opt-in via plugins.enabled) | ``backend`` (pluggable backend for a core tool;
@@ -552,6 +553,7 @@ def parse_manifest_file(
             description=data.get("description", ""), author=_display_author(data.get("author", "")),
             requires_env=data.get("requires_env", []),
             provides_tools=data.get("provides_tools", []),
+            provides_skills=data.get("provides_skills") if isinstance(data.get("provides_skills"), list) else None,
             # ``hooks:`` is the spelling the bundled manifests carried for months; external copies of it
             # must keep declaring the same thing (#108371).
             provides_hooks=data.get("provides_hooks", data.get("hooks", [])), source=source, path=str(plugin_dir),
