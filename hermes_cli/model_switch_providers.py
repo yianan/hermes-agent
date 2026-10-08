@@ -11,6 +11,7 @@ import http.client
 import os
 import time
 import threading as _threading
+from urllib.parse import urlparse
 from dataclasses import dataclass, field
 from typing import Any, List, Optional
 from agent.command_token_source import build_command_token_provider, materialize_probe_api_key
@@ -89,11 +90,25 @@ class _NativePickerModelList(list[str]):
     """A successful native catalog, including an authoritative empty one."""
 
 
+def _endpoint_native_catalog_provider(name: str, api_url: str) -> str:
+    """Recognize named local servers without probing unrelated custom endpoints."""
+    normalized = str(name).lower().replace("custom:", "").replace(" ", "").replace("-", "").replace("_", "")
+    if normalized == "ollama":
+        return "ollama"
+    try:
+        lm_port = urlparse(api_url).port == 1234
+    except ValueError:
+        lm_port = False
+    if normalized in {"lmstudio", "lmstudiolocal"} or lm_port:
+        return "lmstudio"
+    return "custom"
+
+
 def _fetch_picker_live_models(
     api_key: Any, api_url: str, native_catalog_provider: str, preserve_native_models: bool,
     headers: dict[str, str] | None = None, timeout: float = 5.0,
     api_mode: str | None = None, *, cache: bool = True) -> list[str] | None:
-    """Fetch picker models with native Ollama and cached generic discovery."""
+    """Fetch picker models with native local-server and cached generic discovery."""
     from hermes_cli.models import _get_ollama_native_headers, cached_fetch_api_models, fetch_api_models
     from hermes_cli.models_local import (
         _OLLAMA_LOCAL_MODELS_CACHE_TTL,
@@ -109,6 +124,28 @@ def _fetch_picker_live_models(
             fetch_models=lambda: _fetch_picker_live_models(
                 materialize_probe_api_key(api_key), api_url, native_catalog_provider,
                 preserve_native_models, headers, timeout, api_mode, cache=False))
+
+    if _endpoint_native_catalog_provider(native_catalog_provider, api_url) == "lmstudio":
+        if preserve_native_models:
+            return None
+
+        def _probe_lmstudio_catalog():
+            from hermes_cli.models_local import probe_lmstudio_models
+            try:
+                models = probe_lmstudio_models(
+                    api_key=api_key, base_url=api_url, timeout=timeout, headers=headers)
+            except Exception:
+                return None
+            return None if models is None else _NativePickerModelList(models)
+
+        native_models = (
+            cached_fetch_api_models(
+                api_key, api_url, timeout=timeout, headers=headers, api_mode=api_mode,
+                fetch_models=_probe_lmstudio_catalog, ttl_seconds=_OLLAMA_LOCAL_MODELS_CACHE_TTL)
+            if cache else _probe_lmstudio_catalog())
+        if native_models is not None:
+            return native_models
+        # Older LM Studio versions may only expose the OpenAI-compatible endpoint.
 
     candidate_headers = _get_ollama_native_headers(api_url, api_key=api_key)
 
@@ -1034,7 +1071,7 @@ def _lap_user_provider_rows(b: _PickerBuild, user_providers: dict) -> None:
         is_current = b.endpoint_is_current(ep_name, ep_aliases, ep_url_norm)
         discovered, native_catalog_empty, _ = b.discover_endpoint(
             grp["api_key"], api_url,
-            ep_name if str(ep_name).strip().lower() in {"ollama", "custom:ollama"} else "custom",
+            _endpoint_native_catalog_provider(display_name, api_url),
             grp["has_explicit_models"], headers=grp["headers"] or None, api_mode=grp["api_mode"],
             discovery_allowed=grp["discovery_allowed"], is_current=is_current)
         if discovered is not None:
@@ -1167,7 +1204,7 @@ def _lap_custom_provider_rows(b: _PickerBuild, custom_providers: list) -> None:
             url_match_ok=current_url_group_count == 1)
         discovered, native_catalog_empty, probe_live = b.discover_endpoint(
             api_key, api_url,
-            "ollama" if "ollama" in {str(slug).strip().lower(), str(grp.get("name") or "").strip().lower()} else "custom",
+            _endpoint_native_catalog_provider(grp["name"], api_url),
             bool(grp.get("has_explicit_models")), headers=grp.get("extra_headers") or None,
             api_mode=grp.get("api_mode"), discovery_allowed=bool(api_url) and grp.get("discover_models", True),
             is_current=is_current)

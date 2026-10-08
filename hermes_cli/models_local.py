@@ -382,6 +382,7 @@ def _lmstudio_fetch_raw_models(
     api_key: Optional[str] = None,
     base_url: Optional[str] = None,
     timeout: float = 5.0,
+    *, headers: Optional[dict[str, str]] = None,
 ) -> Optional[list[dict]]:
     """Raw model list from LM Studio's ``/api/v1/models``; None on network errors / malformed
     payloads; raises ``AuthError`` on HTTP 401/403."""
@@ -390,7 +391,12 @@ def _lmstudio_fetch_raw_models(
     if not server_root:
         return None
 
-    request = urllib.request.Request(server_root + "/api/v1/models", headers=_lmstudio_request_headers(api_key))
+    request_headers = _lmstudio_request_headers(api_key)
+    if headers:
+        overridden = {key.lower() for key in headers}
+        request_headers = {key: value for key, value in request_headers.items() if key.lower() not in overridden}
+        request_headers.update(headers)
+    request = urllib.request.Request(server_root + "/api/v1/models", headers=request_headers)
     try:
         with _urlopen_model_catalog_request(request, timeout=timeout) as resp:
             payload = json.loads(resp.read().decode())
@@ -434,11 +440,12 @@ def probe_lmstudio_models(
     api_key: Optional[str] = None,
     base_url: Optional[str] = None,
     timeout: float = 5.0,
+    *, headers: Optional[dict[str, str]] = None,
 ) -> Optional[list[str]]:
     """Chat-capable LM Studio model keys — a valid empty list when the server is reachable but has
     no non-embedding models; ``None`` on network errors, malformed responses, or bad base URLs.
     Raises ``AuthError`` on HTTP 401/403 so token issues surface separately from reachability."""
-    raw_models = _lmstudio_fetch_raw_models(api_key=api_key, base_url=base_url, timeout=timeout)
+    raw_models = _lmstudio_fetch_raw_models(api_key=api_key, base_url=base_url, timeout=timeout, **({"headers": headers} if headers else {}))
     if raw_models is None:
         return None
 
