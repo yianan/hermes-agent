@@ -239,6 +239,8 @@ export const zhHantSettings = {
       testBody: '通知運作正常。',
       testSent: '測試已傳送。若沒有出現，請檢查系統通知權限與專注模式／勿擾模式。',
       testUnsupported: '此系統不支援原生通知。',
+      interfaceSoundsTitle: '介面音效',
+      interfaceSoundsDesc: '播放訊息完成提示音和介面回饋。',
       muteSoundsTitle: '靜音介面提示音',
       muteSoundsDesc: '關閉自動完成、喚醒詞和思考提示音、觸感回饋以及系統通知聲音。聲音預覽和語音回覆仍會播放。',
       completionSoundTitle: '完成提示音',

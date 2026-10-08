@@ -37,8 +37,8 @@ interface NotificationsSettingsProps {
 export function NotificationsSettings({ subpage }: NotificationsSettingsProps = {}) {
   const { t } = useI18n()
   const prefs = useStore($nativeNotifyPrefs)
-  const muted = useStore($hapticsMuted)
   const completionSoundVariantId = useStore($completionSoundVariantId)
+  const soundsMuted = useStore($hapticsMuted)
   const copy = t.settings.notifications
   const showAlerts = subpage === undefined || subpage === 'alerts'
   const showSounds = subpage === undefined || subpage === 'sounds'
@@ -83,21 +83,22 @@ export function NotificationsSettings({ subpage }: NotificationsSettingsProps = 
       {showSounds && (
         <>
           <ToggleRow
-            checked={muted}
-            description={copy.muteSoundsDesc}
-            id={settingElementId(SETTING_IDS.notifications.muteSounds)}
-            label={copy.muteSoundsTitle}
-            onChange={setHapticsMuted}
+            checked={!soundsMuted}
+            description={copy.interfaceSoundsDesc}
+            id={settingElementId(SETTING_IDS.notifications.interfaceSounds)}
+            label={copy.interfaceSoundsTitle}
+            onChange={on => setHapticsMuted(!on)}
           />
           <ListRow
             action={
               <>
                 <Select
+                  disabled={soundsMuted}
                   onValueChange={value => {
                     const variantId = Number.parseInt(value, 10)
 
                     setCompletionSoundVariantId(variantId)
-                    previewCompletionSound(variantId)
+                    if (!soundsMuted) previewCompletionSound(variantId)
                     triggerHaptic('selection')
                   }}
                   value={String(completionSoundVariantId)}
@@ -117,6 +118,7 @@ export function NotificationsSettings({ subpage }: NotificationsSettingsProps = 
 
                 <Button
                   className="gap-1.5"
+                  disabled={soundsMuted}
                   onClick={() => {
                     previewCompletionSound()
                     triggerHaptic('crisp')

@@ -40,6 +40,8 @@ export const zhNotifications = {
   testBody: '通知工作正常。',
   testSent: '测试已发送。如果没有出现，请检查系统通知权限和专注模式／勿扰模式。',
   testUnsupported: '此系统不支持原生通知。',
+  interfaceSoundsTitle: '界面声音',
+  interfaceSoundsDesc: '播放消息完成提示音和界面反馈。',
   muteSoundsTitle: '静音界面提示音',
   muteSoundsDesc: '关闭自动完成、唤醒词和思考提示音、触感反馈以及系统通知声音。声音预览和语音回复仍会播放。',
   completionSoundTitle: '完成提示音',

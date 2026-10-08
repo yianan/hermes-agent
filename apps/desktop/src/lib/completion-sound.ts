@@ -435,9 +435,9 @@ function playVariant(variantId: number) {
 }
 
 // Audition the selected variant from settings. Bypasses the haptics mute toggle so
-// sound design can be compared even when turn-end cues are silenced. "None" stays
-// silent — playVariant never schedules it.
+// sound design follows the same interface mute. "None" stays silent.
 export function previewCompletionSound(variantId?: number) {
+  if ($hapticsMuted.get()) return
   playVariant(resolveCompletionSoundVariantId(variantId ?? $completionSoundVariantId.get()))
 }
 
@@ -456,7 +456,10 @@ export function playCompletionSound(dedupeKey?: string) {
     return
   }
 
-  const play = () => playVariant($completionSoundVariantId.get())
+  const play = () => {
+    // Cue ownership is asynchronous: respect a mute applied while it was pending.
+    if (!$hapticsMuted.get()) playVariant($completionSoundVariantId.get())
+  }
 
   if (!dedupeKey) {
     return play()

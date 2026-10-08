@@ -44,6 +44,7 @@ function freshSession(): string {
 
 beforeEach(() => {
   notify.mockClear()
+  setHapticsMuted(false)
   desktopWindow.hermesDesktop = { notify } as unknown as Window['hermesDesktop']
   setNativeNotifyEnabled(true)
 
