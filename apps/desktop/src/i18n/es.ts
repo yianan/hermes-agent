@@ -2434,6 +2434,25 @@ export const esOverrides = {
     skillArchivedMessage: 'Puedes restaurarlo con hermes curator restore.',
     tabPlugins: 'Plugins',
     plugins: {
+      skillManager: {
+        skills: 'Habilidades del plugin',
+        hint: 'Los cambios se aplican a sesiones nuevas. Quitar es reversible; eliminar borra el archivo.',
+        inactive: 'Plugin inactivo',
+        disabled: 'Desactivada',
+        customized: 'Personalizada',
+        restore: 'Restaurar',
+        remove: 'Quitar',
+        delete: 'Eliminar definitivamente',
+        deleteConfirm: '¿Eliminar la habilidad y su entrada del manifiesto?',
+        edit: 'Editar',
+        customize: 'Personalizar',
+        reset: 'Restablecer',
+        resetConfirm: '¿Descartar la copia personalizada y usar el original?',
+        save: 'Guardar',
+        cancel: 'Cancelar',
+        content: 'Contenido',
+        failed: 'No se pudo gestionar la habilidad'
+      },
       agentTitle: 'Plugins del agente',
       agentBlurb:
         'Amplían el agente del perfil seleccionado: herramientas, hooks, proveedores. Se aplican tras reiniciar el gateway.',
@@ -2490,8 +2509,8 @@ export const esOverrides = {
       uninstall: 'Desinstalar',
       uninstallTip: (name: string, profile: string) => `Desinstalar ${name} de ${profile}`,
       uninstallConfirmTitle: (name: string) => `¿Desinstalar ${name}?`,
-      uninstallConfirmBody: (name: string, profile: string) =>
-        `Esto elimina los archivos del plugin del perfil ${profile}. Cualquier mitad de escritorio que incluyera se quita con él. Puedes reinstalarlo desde el catálogo o desde Git cuando quieras.`,
+      uninstallConfirmBody: (_name: string, _profile: string) =>
+        'Los archivos se conservan en plugin-trash para recuperarlos.',
       uninstallFailed: (name: string) => `No se pudo desinstalar ${name}`,
       uninstalled: (name: string) => `${name} desinstalado. Reinicia el gateway para descargarlo.`,
       uninstallDesktopTip: (name: string) => `Desinstalar ${name} de esta app`,

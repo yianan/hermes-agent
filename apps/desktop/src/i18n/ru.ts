@@ -1437,6 +1437,28 @@ export const ruOverrides = {
   skillDeepLink: ruSkillDeepLink,
   skills: {
     plugins: {
+      uninstallConfirmBody: (_name: string, _profile: string) =>
+        'Файлы перемещаются в plugin-trash этого профиля для восстановления.',
+
+      skillManager: {
+        skills: 'Навыки плагина',
+        hint: 'Изменения действуют в новых сеансах. Скрытие обратимо; удаление стирает исходный файл.',
+        inactive: 'Плагин неактивен',
+        disabled: 'Отключён',
+        customized: 'Изменён',
+        restore: 'Восстановить',
+        remove: 'Скрыть',
+        delete: 'Удалить навсегда',
+        deleteConfirm: 'Удалить навык и запись в манифесте навсегда?',
+        edit: 'Изменить',
+        customize: 'Настроить',
+        reset: 'Сбросить изменения',
+        resetConfirm: 'Удалить локальную копию и использовать оригинал?',
+        save: 'Сохранить',
+        cancel: 'Отмена',
+        content: 'Содержимое навыка',
+        failed: 'Не удалось изменить навык'
+      },
       pageBlurb: 'Плагин может расширять приложение, агента или оба сразу — у каждой части свой переключатель.'
     },
     tabSkills: 'Навыки',

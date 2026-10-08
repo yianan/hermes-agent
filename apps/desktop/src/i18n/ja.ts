@@ -1313,6 +1313,28 @@ export const jaOverrides = {
   skillDeepLink: jaSkillDeepLink,
   skills: {
     plugins: {
+      uninstallConfirmBody: (_name: string, _profile: string) =>
+        'ファイルは復元用にこのプロファイルの plugin-trash へ移動します。',
+
+      skillManager: {
+        skills: 'プラグインスキル',
+        hint: '変更は新しいセッションに適用されます。除外は復元可能ですが、削除は元ファイルを消去します。',
+        inactive: 'プラグイン無効',
+        disabled: '無効',
+        customized: 'カスタム',
+        restore: '復元',
+        remove: '除外',
+        delete: '完全に削除',
+        deleteConfirm: 'スキルとマニフェスト項目を完全に削除しますか？',
+        edit: '編集',
+        customize: 'カスタマイズ',
+        reset: '上書きをリセット',
+        resetConfirm: 'ローカルの上書きを破棄して元のスキルを使用しますか？',
+        save: '保存',
+        cancel: 'キャンセル',
+        content: 'スキル内容',
+        failed: 'スキルを管理できませんでした'
+      },
       pageBlurb:
         'プラグインはこのアプリ、エージェント、または両方を拡張できます。それぞれに独立したスイッチがあります。'
     },

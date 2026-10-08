@@ -33,7 +33,21 @@ export interface AgentPluginServer {
   sentence: string
 }
 
+export interface PluginSkillRow {
+  name: string
+  qualified_name: string
+  description: string
+  editable: boolean
+  customizable: boolean
+  customized: boolean
+  disabled: boolean
+  inactive: boolean
+  removable: boolean
+}
+
 export interface AgentPluginRow {
+  skills?: PluginSkillRow[]
+  can_disable?: boolean
   name: string
   /** Canonical registry key (e.g. `image_gen/fal`) — absent on legacy backends. */
   key?: string
@@ -122,6 +136,8 @@ const HIDDEN_KEY_PREFIXES = ['dashboard_auth/', 'model-providers/', 'platforms/'
 const MANAGEABLE_BUNDLED_KEYS = new Set(['disk-cleanup', 'security-guidance'])
 
 export const isDesktopRelevantPlugin = (row: AgentPluginRow): boolean => {
+  if (row.skills?.length) return true
+
   if (row.source === 'bundled') {
     return MANAGEABLE_BUNDLED_KEYS.has(row.key ?? row.name)
   }

@@ -1689,6 +1689,8 @@ def _plugin_rows() -> list[dict]:
             # Manifest ``config_schema`` + current values: the Plugins hub renders these as a form.
             "settings_schema": _tools_mod("hermes_cli.plugins_settings").plugin_settings_fields(key, _dir_path),
             "servers": _plugin_server_rows(_dir_path, key, portable=portable, catalog_titles=titles),
+            "can_disable": pc._read_manifest(_dir_path).get("kind") not in {"exclusive", "model-provider"} if _dir_path else True,
+            "skills": _tools_mod("hermes_cli.plugins_skill_lifecycle").plugin_skill_rows(key, status != "enabled"),
             **cat.catalog_row_fields(_dir, pins, versions),
             **({"update_available": True, "update_target": target}
                if _dir_path and (target := git_updates.get(_dir_path.name)) else {}),
@@ -1798,13 +1800,23 @@ def _plugins_update(rid, params):
 
 
 def _plugins_remove(rid, params):
-    """Uninstall a user install (``<HERMES_HOME>/plugins/<name>``) — the same core as ``hermes plugins
-    remove`` and the dashboard; bundled plugins and paths outside the plugins dir are refused there."""
+    """Move a user install into its profile's plugin-trash for recoverable uninstall."""
     name = (params.get("name") or "").strip()
     if not name:
         return _err(rid, 4019, "plugins.remove requires a 'name'")
-    result = _tools_mod("hermes_cli.plugins_cmd").dashboard_remove_user_plugin(name)
-    return _ok(rid, result) if result.get("ok") else _err(rid, 5026, result.get("error") or "remove failed")
+    try:
+        return _ok(rid, _tools_mod("hermes_cli.plugins_skill_lifecycle").trash_user_plugin(name))
+    except (OSError, ValueError, PermissionError) as exc:
+        return _err(rid, 5026, str(exc))
+
+
+def _plugins_skill(rid, params):
+    try:
+        result = _tools_mod("hermes_cli.plugins_skill_lifecycle").manage_plugin_skill(
+            params.get("skill") or "", params.get("operation") or "view", params.get("content"))
+        return _ok(rid, result)
+    except (OSError, ValueError, PermissionError) as exc:
+        return _err(rid, 5026, str(exc))
 
 
 def _plugins_settings(rid, params):
@@ -1859,7 +1871,7 @@ def _plugins_presence(rid, params):
 
 _PLUGINS_ACTIONS = {"list": _plugins_list, "onboarding": _plugins_onboarding, "presence": _plugins_presence,
                     "toggle": _plugins_toggle, "install": _plugins_install,
-                    "update": _plugins_update, "remove": _plugins_remove, "settings": _plugins_settings}
+                    "update": _plugins_update, "remove": _plugins_remove, "settings": _plugins_settings, "skill": _plugins_skill}
 
 
 @_scoped_rpc("plugins.manage", 5026, catch_resolve=False)
@@ -1867,8 +1879,8 @@ def _(rid, params: dict) -> dict:
     """TUI Plugins Hub backend (shares primitives with ``hermes plugins`` / the dashboard):
     ``list`` → {plugins, user_count, bundled_count}; ``toggle`` flips ``key``/``name`` per ``enable``;
     ``install`` git-clones ``identifier``/``repo`` or a curated ``catalog_name`` (``force``, ``enable``
-    default True); ``update`` re-pins a catalog install or pulls a git install (``force`` accepts a caution scan); ``remove`` deletes
-    a user install by ``name``; ``settings`` writes manifest-declared ``values`` for ``key``."""
+    default True); ``update`` re-pins a catalog install or pulls a git install (``force`` accepts a caution scan); ``remove`` trashes
+    a user install by ``name``; ``skill`` manages a qualified plugin skill; ``settings`` writes manifest-declared ``values`` for ``key``."""
     return _run_action(rid, params, _PLUGINS_ACTIONS, "plugins")
 
 

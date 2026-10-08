@@ -1889,6 +1889,25 @@ catalog: CatalogTranslations
     skillArchivedMessage: string
     tabPlugins: string
     plugins: PluginUpdateTranslations & {
+      skillManager: {
+        skills: string
+        hint: string
+        inactive: string
+        disabled: string
+        customized: string
+        restore: string
+        remove: string
+        delete: string
+        deleteConfirm: string
+        edit: string
+        customize: string
+        reset: string
+        resetConfirm: string
+        save: string
+        cancel: string
+        content: string
+        failed: string
+      }
       agentTitle: string
       agentBlurb: string
       pageBlurb: string

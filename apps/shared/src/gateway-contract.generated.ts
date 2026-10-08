@@ -4415,6 +4415,9 @@ export interface PluginToolsetRow {
 /** ``toggle``: ``key``/``name`` + ``enable``; ``install``: ``identifier``/``repo`` or ``catalog_name`` (+ ``force``, ``enable``, ``ref``); ``update``: ``name`` (+ ``accept_capabilities`` to apply a re-pin that widened the plugin after the user confirmed the ``delta``, + ``force`` to apply an update whose security scan returned caution after the user saw the findings); ``remove``: ``name`` (user installs only); ``settings``: ``key`` + ``values`` (``{setting_key: value}``, non-secret schema keys only); ``presence``: ``names`` (catalog names, answered in that order). */
 export interface PluginsManageParams {
   profile?: string | null
+  skill?: string | null
+  operation?: PluginSkillOperation | null
+  content?: string | null
   action?: PluginsAction
   key?: string | null
   name?: string | null
@@ -4428,9 +4431,13 @@ export interface PluginsManageParams {
   values?: Record<string, unknown> | null
   names?: string[] | null
 }
-export type PluginsAction = 'list' | 'toggle' | 'install' | 'update' | 'remove' | 'settings' | 'onboarding' | 'presence'
-/** ``list`` → ``plugins`` + counts; ``toggle`` → ``ok``/``unchanged``/``restart_required``/``name`` (the canonical key written)/``plugin``; ``install`` → ``hermes_cli.plugins_cmd.dashboard_install_plugin``'s ok payload; ``toggle``/``install``/``update`` that loaded a plugin also carry ``gateway_reloaded`` (the running gateway picked it up and re-wired its handlers) and ``activation`` — the honest split of what is live now vs deferred, so ``restart_required`` is True only when no gateway answered; ``update`` → ``ok``/``unchanged``/``sha``, or ``ok=false`` + ``consent_required`` with the ``delta`` (``{surface: [added...]}``) / ``delta_lines`` a widened pin adds — nothing changed until the client retries with ``accept_capabilities`` — or ``ok=false`` + ``scan_blocked`` with ``scan_verdict`` / ``scan_findings`` (retry a caution verdict with ``force``); ``remove`` → ``ok``/``name`` plus ``cleared_memory_provider`` when the removed plugin was the live ``memory.provider``. */
+export type PluginSkillOperation = 'view' | 'save' | 'customize' | 'reset' | 'disable' | 'enable' | 'remove' | 'restore' | 'delete'
+export type PluginsAction = 'skill' | 'list' | 'toggle' | 'install' | 'update' | 'remove' | 'settings' | 'onboarding' | 'presence'
 export interface PluginsManageResult {
+  skill?: PluginSkillRow | null
+  content?: string | null
+  deleted?: boolean | null
+  trash_path?: string | null
   plugins?: AgentPluginRow[] | null
   user_count?: number | null
   bundled_count?: number | null
@@ -4461,6 +4468,17 @@ export interface PluginsManageResult {
   onboarding?: OnboardingCatalogPlugin[] | null
   presence?: CatalogPluginPresence[] | null
 }
+export interface PluginSkillRow {
+  name: string
+  qualified_name: string
+  description: string
+  editable: boolean
+  customizable: boolean
+  customized: boolean
+  disabled: boolean
+  inactive: boolean
+  removable: boolean
+}
 /** ``methods_tools._plugin_rows`` + ``plugins_cmd_catalog.catalog_row_fields`` provenance. */
 export interface AgentPluginRow {
   name: string
@@ -4472,6 +4490,8 @@ export interface AgentPluginRow {
   portable: boolean
   install_dir: string
   has_desktop_half: boolean
+  can_disable?: boolean | null
+  skills?: PluginSkillRow[] | null
   servers: PluginServerRow[]
   catalog_name?: string | null
   catalog_tier?: string | null

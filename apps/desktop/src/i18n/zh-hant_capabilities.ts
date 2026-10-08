@@ -3,6 +3,25 @@ import type { TranslationOverrides } from './define-locale'
 export const zhHantCapabilities = {
   skills: {
     plugins: {
+      skillManager: {
+        skills: '外掛技能',
+        hint: '變更適用於新對話。移除可還原；永久刪除會刪除技能原始檔。',
+        inactive: '外掛未啟用',
+        disabled: '已停用',
+        customized: '已自訂',
+        restore: '還原',
+        remove: '移除',
+        delete: '永久刪除',
+        deleteConfirm: '永久刪除此技能及清單中的項目？',
+        edit: '編輯',
+        customize: '自訂',
+        reset: '重設覆寫',
+        resetConfirm: '放棄本機覆寫並使用原始技能？',
+        save: '儲存',
+        cancel: '取消',
+        content: '技能內容',
+        failed: '無法管理外掛技能'
+      },
       pageBlurb: '外掛可以擴充本應用程式、代理，或兩者 — 每一部分都有自己的開關。'
     },
     hub: {

@@ -1,11 +1,12 @@
 """Gateway ``plugins.manage remove`` — the Desktop Plugins hub's Uninstall door.
 
 Drives the real ``hermes_cli.plugins_cmd`` removal core against a temp HERMES_HOME so the RPC is
-proven to delete the plugin tree AND its install metadata, and to refuse anything that is not a user
+proven to preserve the plugin tree in trash and keep its recovery metadata, and to refuse anything that is not a user
 install under ``<HERMES_HOME>/plugins/``.
 """
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -27,13 +28,14 @@ def _remove(name):
     return server.handle_request({"id": "1", "method": "plugins.manage", "params": {"action": "remove", "name": name}})
 
 
-def test_remove_deletes_user_install_and_its_metadata(plugins_home):
+def test_remove_preserves_user_install_and_its_metadata_in_trash(plugins_home):
     resp = _remove("demo-plugin")
 
-    assert resp["result"] == {"ok": True, "name": "demo-plugin"}
+    assert resp["result"]["ok"] and resp["result"]["name"] == "demo-plugin"
+    assert (Path(resp["result"]["trash_path"]) / "plugin.yaml").is_file()
     assert not (plugins_home / "plugins" / "demo-plugin").exists()
     metadata = json.loads((plugins_home / "plugins" / ".install-metadata.json").read_text(encoding="utf-8"))
-    assert "demo-plugin" not in metadata and "other" in metadata  # sibling metadata survives
+    assert "demo-plugin" in metadata and "other" in metadata  # recovery retains install provenance
 
 
 def test_remove_refuses_missing_name_and_unknown_plugin(plugins_home):

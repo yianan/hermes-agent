@@ -1352,12 +1352,9 @@ def _owned(owner: str, fn, **call_kwargs):
 
 
 def _handle_patch(args, **kw):
-<<<<<<< HEAD
     from hermes_cli.observability.shared_metrics_harness import record_file_edit
 
-=======
     args = {k: v for k, v in (args or {}).items() if v is not None}
->>>>>>> 9ecd4616b5 (Port local Hermes Agent integrations to v0.21.5)
     tid = kw.get("task_id") or "default"
     mode = args.get("mode", "replace")
     return record_file_edit("patch", mode, lambda: _owned(kw.get("session_id") or tid, patch_tool,

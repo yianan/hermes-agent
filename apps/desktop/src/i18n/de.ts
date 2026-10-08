@@ -2443,6 +2443,25 @@ export const deOverrides = {
     skillArchivedMessage: 'Wiederherstellbar über „hermes curator restore“.',
     tabPlugins: 'Plugins',
     plugins: {
+      skillManager: {
+        skills: 'Plugin-Skills',
+        hint: 'Änderungen gelten für neue Sitzungen. Entfernen ist umkehrbar; Löschen entfernt die Quelldatei.',
+        inactive: 'Plugin inaktiv',
+        disabled: 'Deaktiviert',
+        customized: 'Angepasst',
+        restore: 'Wiederherstellen',
+        remove: 'Entfernen',
+        delete: 'Endgültig löschen',
+        deleteConfirm: 'Skill und Manifesteintrag endgültig löschen?',
+        edit: 'Bearbeiten',
+        customize: 'Anpassen',
+        reset: 'Anpassung zurücksetzen',
+        resetConfirm: 'Lokale Anpassung verwerfen und Original verwenden?',
+        save: 'Speichern',
+        cancel: 'Abbrechen',
+        content: 'Skill-Inhalt',
+        failed: 'Skill konnte nicht verwaltet werden'
+      },
       agentTitle: 'Agent-Plugins',
       agentBlurb:
         'Erweitert den Agenten für das gewählte Profil — Tools, Hooks, Anbieter. Wirkt nach einem Gateway-Neustart.',
@@ -2498,8 +2517,8 @@ export const deOverrides = {
       uninstall: 'Deinstallieren',
       uninstallTip: (name: string, profile: string) => `${name} aus ${profile} deinstallieren`,
       uninstallConfirmTitle: (name: string) => `${name} deinstallieren?`,
-      uninstallConfirmBody: (name: string, profile: string) =>
-        `Dadurch werden die Dateien des Plugins aus dem Profil ${profile} gelöscht. Eine mitgelieferte Desktop-Hälfte wird ebenfalls entfernt. Sie können es jederzeit aus dem Katalog oder aus Git neu installieren.`,
+      uninstallConfirmBody: (_name: string, _profile: string) =>
+        'Die Dateien werden zur Wiederherstellung nach plugin-trash verschoben.',
       uninstallFailed: (name: string) => `${name} konnte nicht deinstalliert werden`,
       uninstalled: (name: string) => `${name} deinstalliert. Starten Sie das Gateway neu, um es zu entladen.`,
       uninstallDesktopTip: (name: string) => `${name} aus dieser App deinstallieren`,

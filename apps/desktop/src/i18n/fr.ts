@@ -2449,6 +2449,25 @@ export const frOverrides = {
     skillArchivedMessage: 'Restaurable via hermes curator restore.',
     tabPlugins: 'Plugins',
     plugins: {
+      skillManager: {
+        skills: 'Compétences du plugin',
+        hint: 'Les changements concernent les nouvelles sessions. Retirer est réversible ; supprimer efface la source.',
+        inactive: 'Plugin inactif',
+        disabled: 'Désactivée',
+        customized: 'Personnalisée',
+        restore: 'Restaurer',
+        remove: 'Retirer',
+        delete: 'Supprimer définitivement',
+        deleteConfirm: 'Supprimer cette compétence et son entrée du manifeste ?',
+        edit: 'Modifier',
+        customize: 'Personnaliser',
+        reset: 'Réinitialiser',
+        resetConfirm: 'Supprimer la copie personnalisée et utiliser la source ?',
+        save: 'Enregistrer',
+        cancel: 'Annuler',
+        content: 'Contenu',
+        failed: 'Gestion impossible'
+      },
       agentTitle: "Plugins de l'agent",
       agentBlurb:
         "Étendez l'agent du profil sélectionné avec des outils, hooks et fournisseurs. Les changements prennent effet après le redémarrage du gateway.",
@@ -2505,8 +2524,8 @@ export const frOverrides = {
       uninstall: 'Désinstaller',
       uninstallTip: (name: string, profile: string) => `Désinstaller ${name} de ${profile}`,
       uninstallConfirmTitle: (name: string) => `Désinstaller ${name} ?`,
-      uninstallConfirmBody: (name: string, profile: string) =>
-        `Cette action supprime les fichiers du plugin du profil ${profile}. Toute moitié bureau fournie est supprimée avec lui. Réinstallez-le depuis le catalogue ou depuis Git à tout moment.`,
+      uninstallConfirmBody: (_name: string, _profile: string) =>
+        'Les fichiers sont conservés dans plugin-trash pour restauration.',
       uninstallFailed: (name: string) => `Impossible de désinstaller ${name}`,
       uninstalled: (name: string) => `${name} désinstallé. Redémarrez le gateway pour le décharger.`,
       uninstallDesktopTip: (name: string) => `Désinstaller ${name} de cette application`,

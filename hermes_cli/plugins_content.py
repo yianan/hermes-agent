@@ -39,6 +39,14 @@ def register_skill(
     # promise a Path downstream.
     path = Path(path)
     if not path.exists():
+        conventional = Path(self.manifest.path) / "skills" / name / "SKILL.md"
+        if (self.manifest.source in {"user", "project"}
+                and self.manifest.provides_skills is not None
+                and name not in self.manifest.provides_skills
+                and path.resolve() == conventional.resolve()):
+            registration = PluginRegistration("skill", f"{self.manifest.name}:{name}", lambda: None)
+            registration.dispose()
+            return registration
         raise FileNotFoundError(f"SKILL.md not found at {path}")
     namespace = self.manifest.skill_namespace or self.manifest.name
     qualified = f"{namespace}:{name}"
@@ -47,6 +55,7 @@ def register_skill(
     entry = {
         "path": path, "plugin": namespace, "plugin_key": self.plugin_id, "bare_name": name,
         "description": description, "frontmatter": dict(frontmatter or {}),
+        "source": self.manifest.source, "plugin_path": self.manifest.path,
     }
     return self._register_entry("skill", qualified, self._manager._plugin_skills, entry,
                                 "Plugin %s registered skill: %s", qualified)

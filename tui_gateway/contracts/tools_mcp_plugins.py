@@ -612,7 +612,20 @@ method("plugins.list", params=PluginsListParams, result=PluginsListResult,
        doc="Loaded plugin manager entries (legacy flat view); the Plugins Hub uses plugins.manage list.")
 
 
+class PluginSkillOperation(WireEnum):
+    view = "view"
+    save = "save"
+    customize = "customize"
+    reset = "reset"
+    disable = "disable"
+    enable = "enable"
+    remove = "remove"
+    restore = "restore"
+    delete = "delete"
+
+
 class PluginsAction(WireEnum):
+    skill = "skill"
     list = "list"
     toggle = "toggle"
     install = "install"
@@ -631,6 +644,9 @@ class PluginsManageParams(ProfileParams):
     ``settings``: ``key`` + ``values`` (``{setting_key: value}``, non-secret schema keys only);
     ``presence``: ``names`` (catalog names, answered in that order)."""
 
+    skill: str | None = None
+    operation: PluginSkillOperation | None = None
+    content: str | None = None
     action: PluginsAction = PluginsAction.list
     key: str | None = None
     name: str | None = None
@@ -689,6 +705,18 @@ class PluginServerRow(Result):
     sentence: str
 
 
+class PluginSkillRow(Result):
+    name: str
+    qualified_name: str
+    description: str
+    editable: bool
+    customizable: bool
+    customized: bool
+    disabled: bool
+    inactive: bool
+    removable: bool
+
+
 class AgentPluginRow(Result):
     """``methods_tools._plugin_rows`` + ``plugins_cmd_catalog.catalog_row_fields`` provenance."""
 
@@ -701,6 +729,8 @@ class AgentPluginRow(Result):
     portable: bool
     install_dir: str
     has_desktop_half: bool
+    can_disable: bool | None = None
+    skills: list[PluginSkillRow] | None = None
     servers: list[PluginServerRow]
     catalog_name: str | None = None
     catalog_tier: str | None = None
@@ -791,6 +821,11 @@ class PluginScanFinding(Result):
 
 
 class PluginsManageResult(Result):
+    skill: PluginSkillRow | None = None
+    content: str | None = None
+    deleted: bool | None = None
+    trash_path: str | None = None
+
     """``list`` → ``plugins`` + counts; ``toggle`` → ``ok``/``unchanged``/``restart_required``/``name``
     (the canonical key written)/``plugin``; ``install`` → ``hermes_cli.plugins_cmd.dashboard_install_plugin``'s
     ok payload; ``toggle``/``install``/``update`` that loaded a plugin also carry ``gateway_reloaded`` (the

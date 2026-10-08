@@ -47,6 +47,7 @@ import { TOOLSETS_QUERY_KEY } from '../toolsets/toolsets-data'
 
 import { mergePluginPackages, type PackageKind, type PluginPackage } from './plugin-packages'
 import { runPluginUpdate } from './plugin-update'
+import { PluginSkills } from './plugin-skills'
 
 /** Deep-link anchor for a package row (`/capabilities?tab=plugins&plugin=<key>`).
  *  Accepts the agent key, the agent name, or the desktop record id. */
@@ -304,7 +305,7 @@ function PackageRow({
   const [desktopBusy, setDesktopBusy] = useState(false)
   const desktopOn = desktop ? desktop.status !== 'disabled' : false
   const agentOn = agent?.status === 'enabled'
-  const agentToggleable = Boolean(agent?.key)
+  const agentToggleable = Boolean(agent?.key) && agent?.can_disable !== false
   // Only what lives under the profile's plugins dir ("user", or "git" when it
   // was cloned there) can be uninstalled here: bundled plugins are refused by
   // the backend and entrypoint (pip-installed) ones go with their package.
@@ -530,6 +531,9 @@ function PackageRow({
           )
         )}
       </div>
+      {!!agent?.skills?.length && (
+        <PluginSkills key={`${scope}:${agent.key}`} plugin={agent} request={request} profile={scope} />
+      )}
     </>
   )
 }

@@ -289,6 +289,23 @@ The app also surfaces the broader Hermes management surface so you don't have to
 - **Messaging** — set up gateway channels. Telegram has a **Quick setup** card: click **Create with QR**, scan the code (or open the link) in Telegram, and Hermes creates the bot, detects your user ID for the allowlist, saves the credentials, and restarts the gateway for you. Any credential save, clear, or enable toggle keeps a **Restart now** banner on the page until the gateway has actually restarted; if a restart fails, the banner stays so you can retry or restart manually.
 - **Agents** and **Command Center** — orchestration surfaces for multi-agent work.
 
+#### Plugin skills (local custom build)
+
+In **Capabilities → Plugins**, expand **Plugin skills** below an agent plugin to inspect its
+packaged skills, including skills from disabled plugins. Select a skill to view the full
+`SKILL.md`. User/project skills can be edited directly; bundled skills first receive a
+profile-local override through **Customise**, with **Reset override** restoring the original.
+The switch and **Remove / Restore** use the same per-skill disabled state as the custom WebUI.
+**Delete permanently** removes a conventional user/project skill and its manifest entry after
+confirmation. A deleted skill does not stop the plugin's remaining skills from loading.
+Changes apply to new sessions; existing conversation prefixes are preserved.
+
+Agent-plugin **Uninstall** moves the complete install into the selected profile's `plugin-trash`
+for recovery, matching the custom WebUI. Restore by moving the saved directory back into that
+profile's `plugins` directory and enabling the plugin. Standalone Desktop UI plugins retain their
+existing uninstall behaviour. The standalone **Skills** tab manages ordinary skills; packaged
+plugin skills are managed within their plugin row.
+
 ### Bot Mode (built in)
 
 **Bot Mode** ships with the app and is on by default: a "one chat per agent"

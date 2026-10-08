@@ -2084,6 +2084,25 @@ export const en: Translations = {
     skillArchivedMessage: 'Restorable via hermes curator restore.',
     tabPlugins: 'Plugins',
     plugins: {
+      skillManager: {
+        skills: 'Plugin skills',
+        hint: 'Changes apply to new sessions. Remove is reversible; delete permanently removes the skill source.',
+        inactive: 'Plugin inactive',
+        disabled: 'Disabled',
+        customized: 'Customised',
+        restore: 'Restore',
+        remove: 'Remove',
+        delete: 'Delete permanently',
+        deleteConfirm: 'Permanently delete this skill and remove it from the plugin manifest?',
+        edit: 'Edit',
+        customize: 'Customise',
+        reset: 'Reset override',
+        resetConfirm: 'Discard the local override and use the original plugin skill?',
+        save: 'Save',
+        cancel: 'Cancel',
+        content: 'Skill content',
+        failed: 'Could not manage plugin skill'
+      },
       agentTitle: 'Agent plugins',
       agentBlurb:
         'Extend the agent for the selected profile — tools, hooks, providers. Take effect after a gateway restart.',
@@ -2138,8 +2157,8 @@ export const en: Translations = {
       uninstall: 'Uninstall',
       uninstallTip: (name: string, profile: string) => `Uninstall ${name} from ${profile}`,
       uninstallConfirmTitle: (name: string) => `Uninstall ${name}?`,
-      uninstallConfirmBody: (name: string, profile: string) =>
-        `This deletes the plugin's files from the ${profile} profile. Any desktop half it shipped is removed with it. Reinstall it from the catalog or from Git at any time.`,
+      uninstallConfirmBody: (_name: string, _profile: string) =>
+        'The plugin files are moved to plugin-trash in this profile for recovery. Its desktop half is removed from this app.',
       uninstallFailed: (name: string) => `Could not uninstall ${name}`,
       uninstalled: (name: string) => `${name} uninstalled. Restart the gateway to unload it.`,
       uninstallDesktopTip: (name: string) => `Uninstall ${name} from this app`,
