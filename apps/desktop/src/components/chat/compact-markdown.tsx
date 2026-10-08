@@ -1,9 +1,10 @@
 import type { ComponentProps, ElementType, FC } from 'react'
-import { memo } from 'react'
+import { Children, isValidElement, memo } from 'react'
 import { Streamdown } from 'streamdown'
 
 import { ExternalLink } from '@/lib/external-link'
 import { cn } from '@/lib/utils'
+import { exceedsHighlightBudget, LazyShiki } from './shiki-highlighter'
 
 // Compact markdown renderer for tool detail bodies. Same Streamdown pipeline
 // as the file preview pane, with tighter typography and external-link routing
@@ -64,6 +65,30 @@ function MarkdownCode({ className, ...rest }: ComponentProps<'code'>) {
   )
 }
 
+// Match the source-file preview palette, including its light/dark adaptation.
+const CODE_THEME = { dark: 'github-dark-default', light: 'github-light-default' }
+const PlainPre = tagged('pre')
+
+function HighlightedPre({ children, className, ...rest }: ComponentProps<'pre'>) {
+  const child = Children.toArray(children)[0]
+  if (isValidElement<ComponentProps<'code'>>(child)) {
+    const language = /language-([^\s]+)/.exec(child.props.className ?? '')?.[1]
+    const code = typeof child.props.children === 'string' ? child.props.children : null
+    if (language && code !== null && !exceedsHighlightBudget(code)) {
+      return (
+        <div className={cn(TAG_CLASSES.pre, className)}>
+          <LazyShiki code={code.replace(/\n$/, '')} language={language} theme={CODE_THEME} />
+        </div>
+      )
+    }
+  }
+  return (
+    <PlainPre className={className} {...rest}>
+      {children}
+    </PlainPre>
+  )
+}
+
 function MarkdownTable({ className, ...rest }: ComponentProps<'table'>) {
   return (
     <div className="mb-2 max-w-full overflow-x-auto rounded-md border border-(--ui-stroke-tertiary) last:mb-0">
@@ -97,17 +122,25 @@ const COMPONENTS = {
   thead: tagged('thead'),
   ul: tagged('ul')
 }
+const HIGHLIGHTED_COMPONENTS = { ...COMPONENTS, pre: HighlightedPre }
 
 export const CompactMarkdown = memo(function CompactMarkdown({
   className,
+  highlightCode = false,
   text
 }: {
   className?: string
+  highlightCode?: boolean
   text: string
 }) {
   return (
     <div className={cn('max-w-full text-xs leading-relaxed text-muted-foreground/90 wrap-anywhere', className)}>
-      <Streamdown components={COMPONENTS} controls={false} mode="static" parseIncompleteMarkdown={false}>
+      <Streamdown
+        components={highlightCode ? HIGHLIGHTED_COMPONENTS : COMPONENTS}
+        controls={false}
+        mode="static"
+        parseIncompleteMarkdown={false}
+      >
         {text}
       </Streamdown>
     </div>

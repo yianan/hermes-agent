@@ -20,7 +20,7 @@ export function SkillMarkdown({ content }: { content: string }) {
           ))}
         </dl>
       )}
-      <CompactMarkdown text={parsed.body} />
+      <CompactMarkdown highlightCode text={parsed.body} />
     </div>
   )
 }
