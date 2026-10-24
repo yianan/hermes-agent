@@ -64,14 +64,14 @@ def test_lmstudio_native_catalog_survives_cache_and_saved_snapshot(model_server,
     provider = _endpoint_native_catalog_provider("LM Studio Local", url)
     discovered, empty = _discover_endpoint_models(
         "local-key", url, provider, False, headers=headers, api_mode=None,
-        probe_live=True, discovery_allowed=True, for_picker=True)
+        probe_live=True, discovery_allowed=True, fast_custom_probe=False)
     assert discovered == expected
     assert empty == embedding_only
     assert state["requests"] == [("/api/v1/models", "catalog")]
     assert cached_fetch_api_models("local-key", url, headers=headers, cache_only=True) == expected
     cached, cached_empty = _discover_endpoint_models(
         "local-key", url, provider, False, headers=headers, api_mode=None,
-        probe_live=False, discovery_allowed=True, for_picker=True)
+        probe_live=False, discovery_allowed=True, fast_custom_probe=False)
     assert (cached, cached_empty) == (expected, embedding_only)
     assert len(state["requests"]) == 1
     # Exercise the actual named-provider row builder, including its snapshot write.

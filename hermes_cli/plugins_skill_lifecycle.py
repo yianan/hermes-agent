@@ -141,7 +141,7 @@ def _delete_user_plugin_skill(manager, info: dict, qualified_name: str) -> None:
     )
     if manifest_file is None:
         raise ValueError("Plugin manifest is missing")
-    import yaml
+    import hermes_yaml as yaml
 
     manifest_text = manifest_file.read_text(encoding="utf-8")
     manifest_data = yaml.safe_load(manifest_text) or {}
@@ -212,13 +212,16 @@ def trash_user_plugin(name):
         raise PermissionError("Unsafe plugin trash directory")
     trash.mkdir(parents=True, exist_ok=True)
     destination = trash / f"{target.name}-{uuid.uuid4().hex}"
-    enabled, disabled = pc._get_enabled_set(), pc._get_disabled_set()
     aliases = pc._plugin_aliases(name) | {name, target.name}
+    from hermes_cli.plugin_oauth import plugin_key
+    grant_key = plugin_key(target)
     shutil.move(str(target), str(destination))
     try:
-        pc._save_plugin_sets(enabled - aliases, disabled | {name})
+        pc._forget_plugin_config(aliases)
     except Exception:
         shutil.move(str(destination), str(target))
         raise
+    from hermes_cli.plugin_oauth import forget_plugin_grants
+    forget_plugin_grants(grant_key)
     _manager().discover_and_load(force=True)
     return {"ok": True, "name": name, "trash_path": str(destination)}

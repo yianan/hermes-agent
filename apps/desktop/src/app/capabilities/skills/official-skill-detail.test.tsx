@@ -1,7 +1,8 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 
-vi.mock('@tanstack/react-query', () => ({
+vi.mock('@tanstack/react-query', async importOriginal => ({
+  ...(await importOriginal<typeof import('@tanstack/react-query')>()),
   useQuery: () => ({
     isLoading: false,
     data: {

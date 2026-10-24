@@ -31,6 +31,7 @@ def _remove(name):
 def test_remove_preserves_user_install_and_its_metadata_in_trash(plugins_home):
     resp = _remove("demo-plugin")
 
+    assert "result" in resp, resp
     assert resp["result"]["ok"] and resp["result"]["name"] == "demo-plugin"
     assert (Path(resp["result"]["trash_path"]) / "plugin.yaml").is_file()
     assert not (plugins_home / "plugins" / "demo-plugin").exists()

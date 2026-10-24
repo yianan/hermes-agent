@@ -60,6 +60,7 @@ export const UserMessageText: FC<{ className?: string; text: string }> = ({ clas
       <CompactMarkdown
         className="text-[length:inherit] leading-[inherit] text-[color:inherit]"
         components={COMPONENTS}
+        highlightCode={false}
         text={markdown}
       />
     </div>
