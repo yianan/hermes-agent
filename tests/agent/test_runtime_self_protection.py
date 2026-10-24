@@ -65,6 +65,19 @@ def test_rm_rf_of_own_venv_is_detected(fake_runtime):
     assert rsp.command_deletes_runtime(f"rm -rf {fake_runtime['venv']}") is not None
 
 
+def test_cd_then_relative_rm_of_own_venv_is_detected(fake_runtime, tmp_path):
+    """Relative delete operands follow the shell's preceding directory change (#143691)."""
+    venv = Path(fake_runtime["venv"])
+    parent = venv.parent
+    assert rsp.command_deletes_runtime(f"cd {parent} && rm -rf {venv.name}", cwd=str(tmp_path)) is not None
+
+
+def test_relative_runtime_delete_uses_terminal_working_directory(fake_runtime, tmp_path):
+    """The shell starts in its requested working directory, not Hermes' process cwd."""
+    parent = Path(fake_runtime["venv"]).parent
+    assert rsp.command_deletes_runtime(f"rm -rf {Path(fake_runtime['venv']).name}", cwd=str(parent)) is not None
+
+
 def test_rm_of_base_interpreter_is_detected(fake_runtime):
     base_exe = os.path.join(fake_runtime["base_dir"], os.listdir(fake_runtime["base_dir"])[0])
     assert rsp.command_deletes_runtime(f"sudo rm -f '{base_exe}'") is not None

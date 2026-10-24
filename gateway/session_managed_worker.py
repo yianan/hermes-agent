@@ -403,7 +403,7 @@ def _worker_env(authority):
     from tools.environments.local import _is_routed_home
     home = Path(str(authority.profile_id))
     if not home.is_absolute():
-        return None
+        raise RuntimeStoreError('invalid_profile_scope')
     # Keyed on the worker's OWNING profile, not only the process-wide multiplex flag: a worker for
     # another profile must never inherit the launch environ even when that flag reads False.
     routed = _is_routed_home(home)

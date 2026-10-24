@@ -43,6 +43,15 @@ def test_claim_freezes_task_policy_and_rejects_forgery(tmp_path, monkeypatch):
     assert context['board'] == 'owned' and context['claim_lock'] == task.claim_lock
     assert context['skills'] == ['owned-skill'] and context['goal_mode'] and context['goal_max_turns'] == 3
     assert context['accept_hooks'] is True and 'Goal criteria' in context['goal_text']
+    monkeypatch.setattr(kb, '_retry_status_for_run', lambda *_: 'review')
+    review_policy, _ = build_kanban_policy(connection, params, config)
+    review_context = json.loads(review_policy.kanban_json)
+    assert review_context['review_lane'] is True
+    assert review_policy.toolsets == ('kanban_review',)
+    from toolsets import resolve_toolset
+    review_tools = set(resolve_toolset('kanban_review'))
+    assert {'read_file', 'search_files', 'kanban_complete', 'kanban_request_changes'} <= review_tools
+    assert not {'terminal', 'execute_code', 'write_file', 'patch', 'kanban_request_review'} & review_tools
     for changed in ({'run_id': task.current_run_id + 1}, {'board': 'foreign'}, {'claim_lock': 'forged'}, {'cwd': '/tmp'}):
         with pytest.raises(RuntimeStoreError):
             build_kanban_policy(connection, params | changed, config)

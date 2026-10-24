@@ -80,6 +80,18 @@ def test_null_platform_toolsets_fall_back_to_platform_default():
     assert enabled == default_enabled
 
 
+def test_explicit_empty_platform_toolsets_do_not_merge_default_mcp_servers():
+    """An explicit zero-tool selection must not add every globally enabled MCP server."""
+    config = {
+        "platform_toolsets": {"cli": []},
+        "mcp_servers": {"claudius": {"url": "http://127.0.0.1:1"}},
+    }
+
+    assert _get_platform_tools(config, "cli") == set()
+    # An absent selection retains the documented default-MCP behavior.
+    assert "claudius" in _get_platform_tools({"mcp_servers": config["mcp_servers"]}, "cli")
+
+
 def test_scalar_platform_toolsets_fall_back_to_platform_default():
     """A non-list platform value is ignored by the resolver."""
     config = {"platform_toolsets": {"cli": "bogus"}}

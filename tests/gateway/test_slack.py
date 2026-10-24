@@ -5670,6 +5670,16 @@ class TestNonConversationalSubtypeAllowlist:
         return event
 
     @pytest.mark.asyncio
+    async def test_slack_connect_message_uses_installation_team_and_drops_external_dm(self, adapter):
+        envelope = {"team_id": "T_HOST"}
+        connect_event = self._event(None, team="T_EXT", user_team="T_EXT", is_ext_shared_channel=True)
+        accepted = await adapter._prefilter_inbound(connect_event, envelope)
+        assert accepted is not None and accepted[1] == "T_HOST"
+
+        dm = self._event(None, channel="D_EXTERNAL", channel_type="im", team="T_EXT", user_team="T_EXT")
+        assert await adapter._prefilter_inbound(dm, envelope) is None
+
+    @pytest.mark.asyncio
     async def test_housekeeping_subtypes_are_dropped(self, adapter):
         for subtype in ("channel_join", "channel_topic", "channel_convert_to_private",
                         "pinned_item", "file_comment", "message_deleted"):

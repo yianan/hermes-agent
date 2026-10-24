@@ -105,6 +105,10 @@ _RM_FLAG_PREFIX = _CMDPOS + r'rm\s+(-[^\s]*\s+)*'
 _PKG_OPTS = r'(?:-[^\s]+(?:\s+[^-\s][^\s]*)?\s+)*'
 
 HARDLINE_PATTERNS = [
+    # authorized_keys is hard-blocked by the file writer. Keep the same
+    # policy for sed's write subcommand, which writes without redirection.
+    (r'\bsed\b[^\n]*?\bw\s+["\']?(?:~|\$home|\$\{home\})/\.ssh/authorized_keys\b',
+     "write to SSH authorized_keys"),
     # Root path: any root-anchored path whose components collapse to "/" in the shell ("/", "//",
     # "/.", "/./", "/../..", optional trailing glob). Each inter-slash segment must be exactly "."
     # or "..", so "/tmp", "/.ssh", even "/..." are literal dirs that fall through to the softer
@@ -351,6 +355,10 @@ DANGEROUS_PATTERNS = [
      "invisible or bidirectional Unicode control character (possible obfuscation)"),
     (rf'\btee\b.*["\']?{_SENSITIVE_WRITE_TARGET}', "overwrite system file via tee"),
     (rf'>>?\s*["\']?{_SENSITIVE_WRITE_TARGET}', "overwrite system file via redirection"),
+    # sed's `w` command writes its pattern space to a named file; it does not
+    # use shell redirection and therefore needs its own sensitive-target rule.
+    (rf'\bsed\b[^\n]*?\bw\s+["\']?{_SENSITIVE_WRITE_TARGET}[^"\'\s]*',
+     "write sensitive file via sed"),
     (rf'\btee\b.*["\']?{_PROJECT_SENSITIVE_WRITE_TARGET}["\']?{_WRITE_TARGET_BOUNDARY}', "overwrite project env/config via tee"),
     (rf'>>?\s*["\']?{_PROJECT_SENSITIVE_WRITE_TARGET}["\']?{_WRITE_TARGET_BOUNDARY}', "overwrite project env/config via redirection"),
     (r'\bxargs\s+.*\brm\b', "xargs with rm"),

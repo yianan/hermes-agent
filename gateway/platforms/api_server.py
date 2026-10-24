@@ -4501,6 +4501,8 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
 
             # Plugin-registered native handlers, wired before AppRunner.setup() freezes the router.
             self._wire_plugin_handlers(self._app)
+            from gateway.platforms.shared_ingress import install_access_log_redaction
+            install_access_log_redaction()
             self._runner = web.AppRunner(self._app)
             await self._runner.setup()
 # Bind directly instead of probing 127.0.0.1 first — the old single-family pre-probe raced the
@@ -4518,6 +4520,8 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
                         if exc.errno != errno.EADDRINUSE or attempt == _BIND_ATTEMPTS - 1:
                             raise
                         await self._runner.cleanup()
+                        from gateway.platforms.shared_ingress import install_access_log_redaction
+                        install_access_log_redaction()
                         self._runner = web.AppRunner(self._app)
                         await self._runner.setup()
                         await asyncio.sleep(0.2 * (attempt + 1))

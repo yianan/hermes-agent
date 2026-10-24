@@ -43,7 +43,8 @@ def build_kanban_policy(connection, params, config):
                 raise RuntimeStoreError('stale_kanban_claim')
             context = kb.build_worker_context(conn, task.id)
             skills = list(task.skills or ())
-            if kb._retry_status_for_run(conn, task.id, task.current_run_id) == 'review':
+            review_lane = kb._retry_status_for_run(conn, task.id, task.current_run_id) == 'review'
+            if review_lane:
                 # Same rule as the dispatcher's review lane: the reviewer always loads sdlc-review.
                 skills = list(dict.fromkeys([*skills, 'sdlc-review']))
     except (ValueError, OSError, sqlite3.Error) as exc:
@@ -62,11 +63,13 @@ def build_kanban_policy(connection, params, config):
         profile=task.assignee, workspaces_root=str(kb.workspaces_root(board=board).resolve()),
         skills=skills, goal_mode=task.goal_mode, goal_max_turns=task.goal_max_turns,
         goal_text='\n\n'.join(p for p in (task.title, task.body) if p), context=context,
-        max_runtime_seconds=task.max_runtime_seconds, accept_hooks=True)
+        max_runtime_seconds=task.max_runtime_seconds, accept_hooks=True,
+        review_lane=review_lane)
     context['db'] = str(path)
     request = json.loads(policy.request_json)
     request.update(source='kanban', board=board, task_id=task.id, run_id=task.current_run_id)
-    return replace(policy, source='kanban', platform='cli', toolsets=tuple(sorted(set(policy.toolsets) | {'kanban'})),
+    toolsets = ('kanban_review',) if context['review_lane'] else tuple(sorted(set(policy.toolsets) | {'kanban'}))
+    return replace(policy, source='kanban', platform='cli', toolsets=toolsets,
                    request_json=json.dumps(request, sort_keys=True), kanban_json=json.dumps(context)), private
 
 

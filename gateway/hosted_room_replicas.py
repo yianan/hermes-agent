@@ -32,6 +32,7 @@ _SELECT_REPLICA = "SELECT * FROM hosted_room_replicas WHERE room_id=?"
 class ReplicaError(HostedRoomError): """Base class for invalid or conflicting replica operations."""
 class ReplicaGapError(ReplicaError): """A page does not start at the replica's next expected sequence."""
 class ReplicaEpochRegressionError(ReplicaError): """A page or demotion carries an older authority epoch than stored."""
+class ReplicaAuthorityLineageError(ReplicaError): """A page changes authority without a valid claim event."""
 
 
 def _initialize_replica_schema(conn: sqlite3.Connection) -> None:
@@ -157,6 +158,30 @@ def ingest_page(
         new_events = [e for e in events if int(e["seq"]) > last_seq]
         if new_events and int(new_events[0]["seq"]) != last_seq + 1:
             raise ReplicaGapError("page skips sequences the replica has not stored")
+        if row is not None:
+            current_gateway, current_epoch = str(row["authority_gateway_id"]), stored_epoch
+            for event in new_events:
+                event_epoch = event.get("authority_epoch")
+                actor = event["actor"]
+                if event["kind"] == "authority.claimed":
+                    payload = event["payload"]
+                    next_epoch = current_epoch + 1
+                    next_gateway = (_validate_identifier(payload.get("authority_gateway_id"),
+                                     label="claimed authority gateway", max_chars=MAX_ACTOR_ID_CHARS)
+                                    if isinstance(payload, dict) else "")
+                    if (actor != _SYSTEM_ACTOR or not isinstance(payload, dict)
+                            or payload.get("previous_gateway_id") != current_gateway
+                            or next_gateway == current_gateway
+                            or type(payload.get("authority_epoch")) is not int
+                            or payload["authority_epoch"] != next_epoch or event_epoch != next_epoch):
+                        raise ReplicaAuthorityLineageError("authority.claimed does not extend the stored authority")
+                    current_gateway = next_gateway
+                    current_epoch = next_epoch
+                elif (event_epoch != current_epoch
+                      or (actor.get("kind") == "gateway" and actor.get("id") != current_gateway)):
+                    raise ReplicaAuthorityLineageError("replica event does not belong to the stored authority span")
+            if (current_gateway, current_epoch) != (authority["gateway_id"], authority["epoch"]):
+                raise ReplicaAuthorityLineageError("page authority is not proven by its events")
         added_bytes = 0
         for event in new_events:
             size = _event_bytes(event)

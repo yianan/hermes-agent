@@ -292,13 +292,20 @@ def _get_approval_config() -> dict:
 
 
 def _get_approval_mode() -> str:
-    """Return 'manual', 'smart', or 'off' (a hosted-room policy overrides config)."""
+    """Return 'manual', 'smart', or 'off' (room policy covers its member, not a routed profile child)."""
+    routed_profile = False
     try:
-        from gateway.hosted_room_execution_policy import current_room_execution_policy
-        if (room_policy := current_room_execution_policy()) is not None:
-            return room_policy.approval_mode
+        from tools.delegate_tool_routes import is_delegated_profile_route
+        routed_profile = is_delegated_profile_route()
     except Exception:
         pass
+    if not routed_profile:
+        try:
+            from gateway.hosted_room_execution_policy import current_room_execution_policy
+            if (room_policy := current_room_execution_policy()) is not None:
+                return room_policy.approval_mode
+        except Exception:
+            pass
     return _normalize_approval_mode(_get_approval_config().get("mode", "manual"))
 
 

@@ -242,7 +242,7 @@ def _uv_uninstall_target(words: list[str]) -> Optional[str]:
     return None
 
 
-def command_deletes_runtime(command: str) -> Optional[str]:
+def command_deletes_runtime(command: str, *, cwd: str | os.PathLike[str] | None = None) -> Optional[str]:
     """Description of the runtime path ``command`` would delete, else ``None``.
 
     Covers ``rm``/``rmdir``/``rd``/``del``/``erase``/``Remove-Item`` (any flags —
@@ -257,11 +257,23 @@ def command_deletes_runtime(command: str) -> Optional[str]:
     if not protected:
         return None
 
+    current_dir = os.path.abspath(os.fspath(cwd) if cwd else os.getcwd())
     for segment in _SEGMENT_SPLIT_RE.split(command):
         words = _strip_prefixes(_split_words(segment))
         if not words:
             continue
         name = os.path.basename(words[0]).lower()
+
+        # Shells keep a changed working directory across `;`, `&&`, `||`, and
+        # `|` segments. Resolve subsequent relative delete operands in that
+        # directory instead of the Hermes process's launch directory.
+        if name in {"cd", "pushd"}:
+            target = next((word for word in words[1:] if not word.startswith("-")), None)
+            if target and target != "-":
+                resolved = _normalize_path(os.path.join(current_dir, target))
+                if resolved and os.path.isdir(resolved):
+                    current_dir = resolved
+            continue
 
         if name == "uv":
             target = _uv_uninstall_target(words)
@@ -272,7 +284,7 @@ def command_deletes_runtime(command: str) -> Optional[str]:
         if name == "find" and _FIND_DELETE_RE.search(segment):
             for word in words[1:]:
                 if not word.startswith("-"):
-                    hit = is_protected_path(word)
+                    hit = is_protected_path(os.path.join(current_dir, word))
                     if hit:
                         return hit
             continue
@@ -283,7 +295,7 @@ def command_deletes_runtime(command: str) -> Optional[str]:
         for word in words[1:]:
             if word.startswith("-"):
                 continue
-            hit = is_protected_path(word)
+            hit = is_protected_path(os.path.join(current_dir, word))
             if hit:
                 return hit
 

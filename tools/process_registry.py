@@ -2731,6 +2731,13 @@ _MAX_HANDOFFS_PER_CHILD = 3
 
 def _handle_process(args, **kw):
     action = args.get("action", "")
+    if action in {"write", "submit"}:
+        # A long-lived shell can outlive the original terminal approval, and
+        # its later stdin commands otherwise skip the terminal pre-exec gate.
+        from tools.approval import _protected_instruction_command_block
+        blocked = _protected_instruction_command_block(str(args.get("data", "")))
+        if blocked is not None:
+            return json.dumps(blocked, ensure_ascii=False)
     # Coerce to string — some models send session_id as an integer
     session_id = str(args.get("session_id", "")) if args.get("session_id") is not None else ""
     if action == "list":

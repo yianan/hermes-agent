@@ -14,12 +14,36 @@ profile untouched; a profile with no adapter for the path gets a 404, never the 
 from __future__ import annotations
 
 import logging
+import re
 from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:  # aiohttp is an optional dependency of every adapter using this module
     from aiohttp import web
 
 logger = logging.getLogger(__name__)
+
+_ACCESS_LOG_SECRET_QUERY = re.compile(
+    r"([?&](?:password|token|secret|api[_-]?key|access[_-]?token|validationtoken|msg_signature)=)"
+    r"[^&\s\"']*", re.IGNORECASE)
+
+
+def redact_access_log_query(text: str) -> str:
+    """Remove credential-bearing query values before aiohttp access records reach handlers."""
+    return _ACCESS_LOG_SECRET_QUERY.sub(r"\1[REDACTED]", text)
+
+
+class _AccessLogQueryFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.msg = redact_access_log_query(record.getMessage())
+        record.args = ()
+        return True
+
+
+def install_access_log_redaction() -> None:
+    """Redact auth query values from the shared listener's default aiohttp access logger."""
+    access_logger = logging.getLogger("aiohttp.access")
+    if not any(isinstance(item, _AccessLogQueryFilter) for item in access_logger.filters):
+        access_logger.addFilter(_AccessLogQueryFilter())
 
 _WILDCARD_HOSTS = frozenset({"", "0.0.0.0", "::", "*"})
 

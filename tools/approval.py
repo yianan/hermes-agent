@@ -16,6 +16,7 @@ import hashlib
 import importlib
 import logging
 import os
+import re
 import threading
 from typing import Optional
 
@@ -1066,7 +1067,7 @@ def _user_deny_block(command: str) -> dict | None:
     return _user_deny_block_result(deny_pattern)
 
 
-def _floor_block(command: str, *, sudo_guard: bool = False) -> dict | None:
+def _floor_block(command: str, *, sudo_guard: bool = False, cwd: str | None = None) -> dict | None:
     """Unconditional floors, BEFORE yolo / mode=off / cron approve-mode so no
     session-level setting can bypass them: hardline catastrophic commands,
     password-piping to ``sudo -S`` with no SUDO_PASSWORD configured (full guard
@@ -1080,7 +1081,7 @@ def _floor_block(command: str, *, sudo_guard: bool = False) -> dict | None:
     if is_hardline:
         logger.warning("Hardline block: %s (command: %s)", hardline_desc, command[:200])
         return _hardline_block_result(hardline_desc, command)
-    runtime_target = command_deletes_runtime(command)
+    runtime_target = command_deletes_runtime(command, cwd=cwd)
     if runtime_target:
         logger.warning("Runtime self-delete block: %s (command: %s)", runtime_target, command[:200])
         return _hardline_block_result(f"recursive/any delete of {runtime_target}", command)
@@ -1092,15 +1093,58 @@ def _floor_block(command: str, *, sudo_guard: bool = False) -> dict | None:
     return _user_deny_block(command)
 
 
+_INSTRUCTION_PATH_IN_TEXT = re.compile(
+    r"(?<![A-Za-z0-9_.-])(?:[A-Za-z]:)?(?:[^\s\"'<>|;&()]*/|\\\\[^\s\"'<>|;&()]*)?"
+    r"(?:AGENTS\.md|CLAUDE\.md|SOUL\.md|\.cursorrules)(?![A-Za-z0-9_.-])",
+    re.IGNORECASE,
+)
+_HERMES_POLICY_PATH_IN_TEXT = re.compile(
+    r"(?<![A-Za-z0-9_.-])(?:~|\$HOME|\$\{HOME\}|\$HERMES_HOME|\$\{HERMES_HOME\})/\.hermes/config\.yaml"
+    r"(?![A-Za-z0-9_.-])",
+    re.IGNORECASE,
+)
+
+
+def _protected_instruction_command_block(command: str) -> dict | None:
+    """Route text/code references to protected instruction files through the write gate.
+
+    Shell and Python are general-purpose interpreters; their many write APIs cannot be
+    reliably classified with the terminal's dangerous-command regexes. Conservatively
+    gate any command/script that names one of the protected files, including reads, so
+    ordinary redirection, sed, Python, and process-substitution spellings cannot skip
+    the one-operation approval prompt.
+    """
+    paths = list(dict.fromkeys(match.group(0).strip("\\") for match in _INSTRUCTION_PATH_IN_TEXT.finditer(command)))
+    if not paths:
+        return None
+    from tools.file_tools_write_guards import _check_protected_instruction_write
+    blocked = _check_protected_instruction_write(paths, get_current_session_key() or "default")
+    return _hardline_block_result(blocked, command) if blocked else None
+
+
+def _hermes_policy_write_block(command: str) -> dict | None:
+    """Require a one-operation human approval before shell/code edits to Hermes policy.
+
+    The file tools hard-block this path. Shell interpreters need an independent gate,
+    including when approvals.mode is off, because config.yaml controls that setting.
+    """
+    if not _HERMES_POLICY_PATH_IN_TEXT.search(command):
+        return None
+    from tools.file_tools_write_guards import _request_protected_instruction_approval
+    blocked = _request_protected_instruction_approval(["Hermes security config"])
+    return _hardline_block_result(blocked, command) if blocked else None
+
+
 def check_dangerous_command(command: str, env_type: str,
                             approval_callback=None,
-                            has_host_access: bool = False) -> dict:
+                            has_host_access: bool = False,
+                            cwd: str | None = None) -> dict:
     """Detect a dangerous command and handle approval (pattern layer only). ``has_host_access``:
     a Docker sandbox that bind-mounts host paths must not skip approval.
     Returns ``{"approved": True/False, "message": str or None, ...}``."""
     if _should_skip_container_guards(env_type, has_host_access=has_host_access):
         return _user_deny_block(command) or _approved()
-    blocked = _floor_block(command)
+    blocked = _floor_block(command, cwd=cwd)
     if blocked is not None:
         return blocked
     if _yolo_active():
@@ -1150,14 +1194,22 @@ def request_tool_approval(tool_name: str, reason: str, *, rule_key: str = "", ap
 
 def check_all_command_guards(command: str, env_type: str,
                              approval_callback=None,
-                             has_host_access: bool = False) -> dict:
+                             has_host_access: bool = False,
+                             cwd: str | None = None) -> dict:
     """Run all pre-exec security checks and return a single approval decision. Plugins that
     want to veto or escalate a command do it from ``pre_tool_call``.
     ``has_host_access``: a Docker sandbox with bind-mounted host paths takes the normal flow."""
     if _should_skip_container_guards(env_type, has_host_access=has_host_access):
         return _user_deny_block(command) or _approved()
 
-    blocked = _floor_block(command, sudo_guard=True)
+    protected_instruction = _protected_instruction_command_block(command)
+    if protected_instruction is not None:
+        return protected_instruction
+    policy_write = _hermes_policy_write_block(command)
+    if policy_write is not None:
+        return policy_write
+
+    blocked = _floor_block(command, sudo_guard=True, cwd=cwd)
     if blocked is not None:
         return blocked
 
@@ -1236,6 +1288,12 @@ def check_execute_code_guard(code: str, env_type: str, has_host_access: bool = F
         return _approved()
     if _should_skip_container_guards(env_type, has_host_access=has_host_access):
         return _approved()
+    protected_instruction = _protected_instruction_command_block(code)
+    if protected_instruction is not None:
+        return protected_instruction
+    policy_write = _hermes_policy_write_block(code)
+    if policy_write is not None:
+        return policy_write
     approval_mode = approval_context._get_approval_mode()
     if _yolo_active() or approval_mode == "off":
         return _approved()

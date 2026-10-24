@@ -3610,7 +3610,9 @@ class SlackAdapter(BasePlatformAdapter):
     def _event_team_id(event: dict, body: Optional[dict] = None) -> str:
         """Resolve a workspace ID from the event plus Bolt's outer payload.
         Bolt passes only the inner ``event``; Slack puts ``team_id`` on the outer payload."""
-        for payload in (event, body or {}):
+        # In Slack Connect, the inner event's team can identify the external org;
+        # scope dedupe and sessions to the installation workspace from the envelope.
+        for payload in (body or {}, event):
             if not isinstance(payload, dict):
                 continue
             team = payload.get("team_id") or payload.get("team")
@@ -4503,6 +4505,12 @@ class SlackAdapter(BasePlatformAdapter):
         if event_ts and self._dedup.is_duplicate(self._workspace_event_id(dedup_team_id, event_ts)):
             return None
         channel_id = event.get("channel", "")
+        channel_type = event.get("channel_type", "") or ("im" if channel_id.startswith("D") else "")
+        author_team = event.get("user_team") or event.get("team") or ""
+        if (channel_type in {"im", "mpim"} and author_team and dedup_team_id
+                and str(author_team) != dedup_team_id):
+            logger.info("[Slack] Ignoring DM from external workspace user %s", event.get("user", ""))
+            return None
         if self._is_ignored_channel(channel_id):
             logger.info("[Slack] Ignoring message in configured ignored channel %s", channel_id)
             return None

@@ -23,6 +23,16 @@ from aiohttp.test_utils import TestClient, TestServer
 from gateway.config import GatewayConfig, Platform, PlatformConfig
 
 
+def test_shared_listener_access_log_redacts_query_credentials():
+    from gateway.platforms.shared_ingress import redact_access_log_query
+
+    line = '"POST /p/blue/bluebubbles-webhook?password=synthetic%2Bsecret&x=1 HTTP/1.1"'
+    safe = redact_access_log_query(line)
+    assert "synthetic" not in safe
+    assert "password=[REDACTED]" in safe
+    assert "&x=1" in safe
+
+
 def _line_sig(body: bytes, secret: str) -> str:
     return base64.b64encode(hmac.new(secret.encode(), body, hashlib.sha256).digest()).decode()
 

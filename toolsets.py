@@ -164,6 +164,14 @@ TOOLSETS = {
         "files, and (for orchestrators) list, unblock, and fan out tasks.",
         [t for t in _HERMES_CORE_TOOLS if t.startswith("kanban_")],
     ),
+    # Review claims intentionally replace the assignee's tool surface. A reviewer
+    # can inspect files and report a decision, but cannot execute commands or edit
+    # the workspace, and cannot send the card back to review again.
+    "kanban_review": _ts(
+        "Read-only Kanban review: inspect files, comment, approve, or request changes",
+        ["read_file", "search_files", "kanban_show", "kanban_comment",
+         "kanban_complete", "kanban_request_changes", "kanban_attachments"],
+    ),
     "discord": _ts("Discord read and participate tools (fetch messages, search members, create threads)", ["discord"]),
     "discord_admin": _ts("Discord server management (list channels/roles, pin messages, assign roles)", ["discord_admin"]),
     "yuanbao": _ts("Yuanbao platform tools - group info, member queries, DM, stickers", _YUANBAO_TOOLS),

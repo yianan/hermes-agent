@@ -10,6 +10,7 @@ never touches the lifecycle; this module is the whole contract between the two.
 from __future__ import annotations
 
 import contextlib
+from contextvars import ContextVar
 import json
 import logging
 import re
@@ -24,6 +25,21 @@ from agent.delegation_provider import (
 logger = logging.getLogger("tools.delegate_tool")  # log-record parity with the origin module
 
 _PARAM_NAME_RE = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
+_DELEGATED_PROFILE_ROUTE: ContextVar[bool] = ContextVar("hermes_delegated_profile_route", default=False)
+
+
+def is_delegated_profile_route() -> bool:
+    """Whether this child is executing under a different profile's authority."""
+    return _DELEGATED_PROFILE_ROUTE.get()
+
+
+@contextlib.contextmanager
+def _delegated_profile_route_scope() -> Iterator[None]:
+    token = _DELEGATED_PROFILE_ROUTE.set(True)
+    try:
+        yield
+    finally:
+        _DELEGATED_PROFILE_ROUTE.reset(token)
 
 
 @dataclass
@@ -142,6 +158,7 @@ def delegated_profile_scope(home: Any) -> Iterator[None]:
         stack.callback(reset_secret_scope, set_secret_scope(owner_secret_scope(home), profile_home=str(home)))
         if routed:
             stack.callback(reset_multiplex_context, set_multiplex_context(True))
+        stack.enter_context(_delegated_profile_route_scope())
         stack.callback(reset_terminal_scope, install_profile_terminal_scope(home))
         yield
 

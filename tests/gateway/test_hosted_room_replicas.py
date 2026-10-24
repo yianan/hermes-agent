@@ -108,6 +108,35 @@ def test_ingest_rejects_epoch_regression(tmp_path):
         )
 
 
+def test_ingest_rejects_authority_change_without_claim(tmp_path):
+    rdb = _replica_db(tmp_path)
+    first = _seed_room(_authority_db(tmp_path), n_events=3)
+    replicas.ingest_page(rdb, room_id="room-1", room_name="Field Room", members=MEMBERS, page=first)
+    forged = _seed_room(_authority_db(tmp_path, "successor.db"), gateway_id=AUTH_B, n_events=1)
+    event = forged["events"][0]
+    event.update(seq=4, authority_epoch=2, event_id="successor-without-claim")
+    forged["authority"] = {"gateway_id": AUTH_B, "epoch": 2}
+    with pytest.raises(replicas.ReplicaAuthorityLineageError):
+        replicas.ingest_page(rdb, room_id="room-1", room_name="Field Room", members=MEMBERS, page=forged)
+
+
+def test_ingest_accepts_successor_only_after_claim(tmp_path, monkeypatch):
+    source, replica = _authority_db(tmp_path), _replica_db(tmp_path)
+    first = _seed_room(source, n_events=3)
+    replicas.ingest_page(replica, room_id="room-1", room_name="Field Room", members=MEMBERS, page=first)
+    monkeypatch.setattr(replicas, "local_authority_gateway_id", lambda: AUTH_B)
+    promoted = replicas.promote_replica(replica, room_id="room-1")
+    rooms.append_event(replica, room_id="room-1", event_id="successor-message", kind="message.user",
+        actor=USER, payload={"text": "successor"}, authority_gateway_id=AUTH_B,
+        authority_epoch=promoted["authority_epoch"])
+    successor_page = rooms.read_events(replica, room_id="room-1", since_seq=3, limit=100)
+    replicas.ingest_page(_replica_db(tmp_path, "follower.db"), room_id="room-1", room_name="Field Room",
+        members=MEMBERS, page=first)
+    result = replicas.ingest_page(_replica_db(tmp_path, "follower.db"), room_id="room-1",
+        room_name="Field Room", members=MEMBERS, page=successor_page)
+    assert result["authority"] == {"gateway_id": AUTH_B, "epoch": 2}
+
+
 def test_ingest_requires_authority_stamp(tmp_path):
     page = _seed_room(_authority_db(tmp_path))
     page.pop("authority")

@@ -101,6 +101,15 @@ def test_keyless_worker_reads_its_own_profile_home_not_the_default(tmp_path, mon
     assert built['api_key'] == own
 
 
+def test_managed_worker_rejects_non_absolute_profile_scope(monkeypatch):
+    import pm.environments
+    monkeypatch.setattr(pm.environments, '_payload_manifest', lambda _root: {})
+    from gateway.session_managed_worker import _worker_env
+    from hermes_state_runtime import RuntimeStoreError
+    with pytest.raises(RuntimeStoreError, match='invalid_profile_scope'):
+        _worker_env(SimpleNamespace(profile_id='secondary'))
+
+
 def test_bound_launch_key_wins_over_the_route_key(tmp_path, monkeypatch):
     launch = 'fake-launch-' + secrets.token_hex(8)
     monkeypatch.setenv(KEY_ENV, 'fake-route-' + secrets.token_hex(8))
